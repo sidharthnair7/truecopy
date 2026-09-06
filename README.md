@@ -88,6 +88,30 @@ curl -X POST localhost:8080/api/runs -H "Content-Type: application/json" -d "{\"
 
 Each language in a run ends as one of `PUBLISHED`, `VERIFIED_DRY_RUN`, `REFUSED` (with the failing rules), `FAILED` (translation or API error) or `SKIPPED` (same as the video's default language). Published languages carry `readbackTitle` and `readbackMatched`.
 
+## Frontend
+
+`frontend/` is a Vite + React + TypeScript app (landing page, `/workspace`, `/playground`). In development run `npm run dev` there (proxies `/api` to `:8080`). `npm run build` writes into `src/main/resources/static`, so the Spring Boot jar serves the site and the API from one origin with a react-router fallback.
+
+## Deploy (one container, judge-safe)
+
+The `Dockerfile` builds the frontend, then the jar, then runs it on a JRE. Any Docker host works (Render, Railway, Fly). Environment:
+
+| Variable | Purpose |
+|---|---|
+| `GEMINI_API_KEY` | Free key from aistudio.google.com/apikey |
+| `GOOGLE_CLIENT_SECRET_JSON` | Contents of the OAuth client JSON (instead of a file on disk) |
+| `OAUTH_REDIRECT_URI` | `https://YOUR-HOST/api/auth/callback` — add it to the Google OAuth client too |
+| `GOOGLE_REFRESH_TOKEN` | Optional. Seeds the channel connection on hosts with ephemeral disks. Read it once locally with `ALLOW_TOKEN_EXPORT=true` and `GET /api/auth/export` |
+| `ALLOW_LIVE_RUNS` | `false` on a public deployment: dry runs, the playground, readbacks and run history stay open; nothing can be written to the channel |
+| `FRONTEND_URL` | Where the OAuth callback redirects; default `/workspace` (same origin) |
+| `RUNS_DIR`, `TOKENS_DIR` | Default `/data/runs`, `/data/tokens` in the container; mount a volume there to keep history across restarts |
+
+Local build and run:
+
+```bash
+docker build -t truecopy . && docker run -p 8080:8080 --env-file .env -e ALLOW_LIVE_RUNS=false truecopy
+```
+
 ## Quota
 
 YouTube grants 10,000 units per day per Google Cloud project. `videos.list` costs 1, `videos.update` costs 50 and carries every language for that video in one call. Three languages on one video cost 50 + 3 = 53 units. The meter counts from process start; YouTube resets at midnight Pacific.

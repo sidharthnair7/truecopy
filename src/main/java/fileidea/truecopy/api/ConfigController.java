@@ -32,6 +32,7 @@ public class ConfigController {
                 .llmModels(models)
                 .llmKeyPresent(key != null && !key.isBlank())
                 .googleClientSecretPresent(auth.isConfigured())
+                .liveRunsAllowed(properties.isAllowLiveRuns())
                 .sourceLanguage(properties.getSourceLanguage())
                 .defaultLanguages(properties.getLanguages())
                 .quotaBudget(properties.getQuotaBudget())

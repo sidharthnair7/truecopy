@@ -103,6 +103,12 @@ export default function Home() {
                     See how it works
                   </a>
                   <Link
+                    to="/playground"
+                    className="px-6 py-3 rounded-full glass glass--t3 text-sm hover:brightness-110 transition-all duration-200"
+                  >
+                    Try the gate
+                  </Link>
+                  <Link
                     to="/workspace"
                     className="px-6 py-3 rounded-full bg-t-green text-bg text-sm font-medium hover:opacity-90 transition-all duration-200 shadow-[0_0_20px_rgba(200,214,185,0.4)]"
                   >

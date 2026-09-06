@@ -2,6 +2,7 @@ package fileidea.truecopy.api;
 
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import fileidea.truecopy.api.dto.ApiError;
+import fileidea.truecopy.auth.LiveRunsDisabledException;
 import fileidea.truecopy.auth.NotConnectedException;
 import fileidea.truecopy.translate.TranslationException;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +22,11 @@ public class ApiExceptionHandler {
     @ExceptionHandler(NotConnectedException.class)
     public ResponseEntity<ApiError> notConnected(NotConnectedException e) {
         return body(HttpStatus.UNAUTHORIZED, e.getMessage());
+    }
+
+    @ExceptionHandler(LiveRunsDisabledException.class)
+    public ResponseEntity<ApiError> liveDisabled(LiveRunsDisabledException e) {
+        return body(HttpStatus.FORBIDDEN, e.getMessage());
     }
 
     @ExceptionHandler(NoResourceFoundException.class)

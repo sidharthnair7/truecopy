@@ -1,6 +1,7 @@
 package fileidea.truecopy.auth;
 
 import com.google.api.client.auth.oauth2.Credential;
+import com.google.api.client.auth.oauth2.TokenResponse;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
 import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
 import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
@@ -18,6 +19,8 @@ import org.springframework.stereotype.Service;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.Reader;
+import java.io.StringReader;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -48,7 +51,8 @@ public class GoogleAuthService {
     }
 
     public boolean isConfigured() {
-        return Files.isRegularFile(Path.of(properties.getGoogle().getClientSecretsPath()));
+        String json = properties.getGoogle().getClientSecretsJson();
+        return (json != null && !json.isBlank()) || Files.isRegularFile(Path.of(properties.getGoogle().getClientSecretsPath()));
     }
 
     public String authorizationUrl() {
@@ -78,6 +82,9 @@ public class GoogleAuthService {
         try {
             Credential credential = flow().loadCredential(USER_ID);
             if (credential == null) {
+                credential = seedFromRefreshToken();
+            }
+            if (credential == null) {
                 return Optional.empty();
             }
             boolean usable = credential.getRefreshToken() != null
@@ -90,6 +97,10 @@ public class GoogleAuthService {
 
     public boolean isConnected() {
         return credential().isPresent();
+    }
+
+    public Optional<String> refreshToken() {
+        return credential().map(Credential::getRefreshToken);
     }
 
     public void disconnect() {
@@ -108,6 +119,17 @@ public class GoogleAuthService {
                 .build();
     }
 
+    private Credential seedFromRefreshToken() throws IOException {
+        String seed = properties.getGoogle().getRefreshToken();
+        if (seed == null || seed.isBlank()) {
+            return null;
+        }
+        TokenResponse response = new TokenResponse().setRefreshToken(seed.strip());
+        Credential credential = flow().createAndStoreCredential(response, USER_ID);
+        log.info("YouTube credential seeded from GOOGLE_REFRESH_TOKEN");
+        return credential;
+    }
+
     private GoogleAuthorizationCodeFlow flow() {
         GoogleAuthorizationCodeFlow existing = flow;
         if (existing != null) {
@@ -122,12 +144,7 @@ public class GoogleAuthService {
     }
 
     private GoogleAuthorizationCodeFlow buildFlow() {
-        Path secretsPath = Path.of(properties.getGoogle().getClientSecretsPath());
-        if (!Files.isRegularFile(secretsPath)) {
-            throw new IllegalStateException("Google OAuth client secrets not found at " + secretsPath.toAbsolutePath()
-                    + ". Download the OAuth client JSON from Google Cloud Console and save it there.");
-        }
-        try (InputStreamReader reader = new InputStreamReader(Files.newInputStream(secretsPath), StandardCharsets.UTF_8)) {
+        try (Reader reader = secretsReader()) {
             GoogleClientSecrets secrets = GoogleClientSecrets.load(jsonFactory, reader);
             File tokensDir = new File(properties.getGoogle().getTokensDir());
             return new GoogleAuthorizationCodeFlow.Builder(transport, jsonFactory, secrets, SCOPES)
@@ -137,5 +154,18 @@ public class GoogleAuthService {
         } catch (IOException e) {
             throw new UncheckedIOException("Could not read Google OAuth client secrets", e);
         }
+    }
+
+    private Reader secretsReader() throws IOException {
+        String json = properties.getGoogle().getClientSecretsJson();
+        if (json != null && !json.isBlank()) {
+            return new StringReader(json);
+        }
+        Path secretsPath = Path.of(properties.getGoogle().getClientSecretsPath());
+        if (!Files.isRegularFile(secretsPath)) {
+            throw new IllegalStateException("Google OAuth client secrets not found at " + secretsPath.toAbsolutePath()
+                    + " and GOOGLE_CLIENT_SECRET_JSON is not set. Download the OAuth client JSON from Google Cloud Console.");
+        }
+        return new InputStreamReader(Files.newInputStream(secretsPath), StandardCharsets.UTF_8);
     }
 }

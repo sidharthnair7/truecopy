@@ -2,6 +2,7 @@ package fileidea.truecopy.run;
 
 import fileidea.truecopy.api.dto.RunRequest;
 import fileidea.truecopy.auth.GoogleAuthService;
+import fileidea.truecopy.auth.LiveRunsDisabledException;
 import fileidea.truecopy.auth.NotConnectedException;
 import fileidea.truecopy.config.TrueCopyProperties;
 import fileidea.truecopy.youtube.QuotaMeter;
@@ -27,6 +28,9 @@ public class RunService {
     public Run start(RunRequest request) {
         if (!auth.isConnected()) {
             throw new NotConnectedException();
+        }
+        if (!request.isDryRun() && !properties.isAllowLiveRuns()) {
+            throw new LiveRunsDisabledException();
         }
         List<String> languages = request.getLanguages() == null || request.getLanguages().isEmpty()
                 ? properties.getLanguages()

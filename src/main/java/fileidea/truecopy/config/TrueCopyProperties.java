@@ -9,12 +9,14 @@ import java.util.List;
 @ConfigurationProperties(prefix = "truecopy")
 public class TrueCopyProperties {
 
-    private String frontendUrl = "";
+    private String frontendUrl = "/workspace";
     private List<String> corsOrigins = List.of("http://localhost:5173");
     private String runsDir = "./runs";
     private String sourceLanguage = "en";
     private List<String> languages = List.of("es", "fr", "ja");
     private long quotaBudget = 10_000;
+    private boolean allowLiveRuns = true;
+    private boolean allowTokenExport = false;
     private Google google = new Google();
     private Llm llm = new Llm();
     private Gemini gemini = new Gemini();
@@ -23,6 +25,8 @@ public class TrueCopyProperties {
     @Data
     public static class Google {
         private String clientSecretsPath = "./client_secret.json";
+        private String clientSecretsJson = "";
+        private String refreshToken = "";
         private String tokensDir = "./tokens";
         private String redirectUri = "http://localhost:8080/api/auth/callback";
         private String applicationName = "TrueCopy";

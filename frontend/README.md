@@ -1,23 +1,16 @@
-# TrueCopy Website — Scaffold
+# TrueCopy frontend
 
-## Setup
+Vite + React 18 + TypeScript + Tailwind 3 + framer-motion. Routes: `/` landing, `/workspace` product, `/playground` gate playground.
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open http://localhost:3000 for the landing page, http://localhost:3000/workspace for the product UI stub.
+Dev server is `http://localhost:5173` and proxies `/api/*` to the backend on `:8080`. For OAuth to return here in dev, start the backend with `FRONTEND_URL=http://localhost:5173/workspace`.
 
-## What's real vs. mock
+`npm run build` writes into `../src/main/resources/static`, so the Spring Boot jar serves the site and the API from one origin. The Dockerfile at the repo root does this automatically.
 
-- Landing page sections are fully built with placeholder/mock content (screenshots referenced in comments are not included — swap in real assets).
-- Hero 3D scene (`components/HeroScene.tsx`) is a working R3F scene with a WebGL-support + reduced-motion fallback (`StaticFallback`). No WebGPU/TSL/Gaussian splats — kept intentionally simple per the build brief.
-- `/workspace` uses `MOCK_VIDEOS` and `MOCK_REPORT` constants at the top of `app/workspace/page.tsx` — replace these with real API calls to your TrueCopy backend (video list, gate report per run).
-- The Dry Run / Live Run toggle in the workspace is currently local state only — wire it to actually gate whether the backend performs a real `videos.update` call.
+Every backend endpoint is typed and wrapped in `src/lib/api.ts` (`api.auth.*`, `api.videos`, `api.video`, `api.readback`, `api.translate.preview`, `api.gate.*`, `api.runs.*`, `pollRun`). Payload shapes and the endpoint table are in the root `README.md`.
 
-## Notes
-
-- Lenis smooth scroll auto-disables when the user has `prefers-reduced-motion` set.
-- The GSAP pinned pipeline section (`components/PipelineSection.tsx`) pins the viewport for its scroll duration — test this carefully on mobile, pinned sections are the most common source of janky scroll bugs. Consider swapping to a simpler non-pinned fade-in sequence on small viewports if it causes issues.
-- All accent colors and spacing tokens live in `tailwind.config.ts` — change the palette there, not inline.
+Design tokens live in `tailwind.config.ts` and `src/index.css`; glass tiers in `src/components/glass.css`.

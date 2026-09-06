@@ -13,6 +13,7 @@ public class ConfigResponse {
     List<String> llmModels;
     boolean llmKeyPresent;
     boolean googleClientSecretPresent;
+    boolean liveRunsAllowed;
     String sourceLanguage;
     List<String> defaultLanguages;
     long quotaBudget;

@@ -117,4 +117,15 @@ public class AuthController {
         auth.disconnect();
         return Map.of("connected", false);
     }
+
+    @GetMapping("/export")
+    public ResponseEntity<Map<String, String>> export() {
+        if (!properties.isAllowTokenExport()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("message", "Token export is disabled. Start the server with ALLOW_TOKEN_EXPORT=true on a trusted machine to read the refresh token for deployment."));
+        }
+        return auth.refreshToken()
+                .map(token -> ResponseEntity.ok(Map.of("refreshToken", token)))
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "No channel connected")));
+    }
 }
