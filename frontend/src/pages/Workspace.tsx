@@ -510,14 +510,37 @@ export default function Workspace() {
           </AnimatePresence>
 
           {activeRun && (
-            <div className="glass glass--t3-box rounded-xl px-4 py-3 text-xs font-mono flex flex-wrap gap-x-5 gap-y-1 text-grey-400">
-              <span>run <span className="text-grey-100">{activeRun.id}</span></span>
-              <span>{activeRun.status}</span>
-              <span>{activeRun.videosProcessed}/{activeRun.videosRequested} videos</span>
-              <span className="text-t-green">{activeRun.published} verified</span>
-              <span className="text-t-red">{activeRun.refused} refused</span>
-              {activeRun.failed > 0 && <span className="text-t-amber">{activeRun.failed} failed</span>}
-              {activeRun.error && <span className="text-t-red break-all">{activeRun.error}</span>}
+            <div className="glass glass--t3-box rounded-xl px-4 py-3 text-xs font-mono text-grey-400 space-y-2">
+              <div className="flex flex-wrap gap-x-5 gap-y-1">
+                <span>run <span className="text-grey-100">{activeRun.id}</span></span>
+                <span>{activeRun.status}</span>
+                <span>{activeRun.videosProcessed}/{activeRun.videosRequested} videos</span>
+                <span className="text-t-green">{activeRun.published} verified</span>
+                <span className="text-t-red">{activeRun.refused} refused</span>
+                {activeRun.failed > 0 && <span className="text-t-amber">{activeRun.failed} failed</span>}
+                {activeRun.error && <span className="text-t-red break-all">{activeRun.error}</span>}
+              </div>
+              {isRunning && (
+                <div>
+                  <div className="flex justify-between text-[11px] mb-1">
+                    <span className="text-grey-100">
+                      {activeRun.currentLanguage
+                        ? `translating ${LANGUAGE_NAMES[activeRun.currentLanguage] ?? activeRun.currentLanguage} (${(activeRun.languagesDone ?? 0) + 1} of ${activeRun.languagesTotal ?? languages.length})…`
+                        : activeRun.videos.length > 0 && !activeRun.dryRun
+                          ? "publishing to YouTube and reading back…"
+                          : "reading the video from YouTube…"}
+                    </span>
+                    <span className="text-grey-600">{activeRun.currentVideoTitle ? activeRun.currentVideoTitle.slice(0, 40) : ""}</span>
+                  </div>
+                  <div className="h-1 rounded-full bg-grey-800 overflow-hidden">
+                    <motion.div
+                      className="h-full bg-t-green/70 rounded-full"
+                      animate={{ width: `${Math.max(4, Math.round(((activeRun.languagesDone ?? 0) / Math.max(1, activeRun.languagesTotal ?? languages.length)) * 100))}%` }}
+                      transition={{ duration: 0.6, ease: "easeOut" }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           )}
           {audit && (
@@ -605,7 +628,28 @@ export default function Workspace() {
           {detail && auth?.connected && (
             <div className="glass glass--t2 rounded-2xl p-4">
               <h2 className="text-[11px] text-grey-400 mb-1 uppercase tracking-widest font-medium">What a viewer sees</h2>
-              <p className="text-[11px] text-grey-600 mb-3">Read live from YouTube with <span className="font-mono">hl=</span> — this is YouTube confirming it, not the tool claiming it.</p>
+              <p className="text-[11px] text-grey-600 mb-2">Read live from YouTube with <span className="font-mono">hl=</span> — this is YouTube confirming it, not the tool claiming it.</p>
+              <p className="text-[11px] text-grey-600 mb-3">
+                YouTube shows a localized title only to viewers whose YouTube language matches. Your own account sees the original. To see it as a viewer would, open the video in a private window:{" "}
+                {availableLangs.filter((l) => l !== "en").map((l, i) => (
+                  <span key={l}>
+                    {i > 0 && " · "}
+                    <a
+                      href={`https://www.youtube.com/watch?v=${encodeURIComponent(detail.id)}&hl=${encodeURIComponent(l)}&persist_hl=1`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-t-green hover:underline font-mono"
+                    >
+                      youtube.com in {LANGUAGE_NAMES[l] ?? l} ↗
+                    </a>
+                  </span>
+                ))}
+                {availableLangs.filter((l) => l !== "en").length === 0 && <span className="font-mono">no localizations yet</span>}
+                {" · "}
+                <a href={`https://studio.youtube.com/video/${encodeURIComponent(detail.id)}/translations`} target="_blank" rel="noreferrer" className="text-grey-400 hover:underline font-mono">
+                  Studio ↗
+                </a>
+              </p>
               <div className="flex flex-wrap gap-1.5 mb-3">
                 {availableLangs.map((l) => (
                   <button key={l} onClick={() => void showReadback(l)} className={`px-2.5 py-1 rounded-full text-[12px] font-mono border transition-all ${readbackLang === l && readback ? "bg-t-green/15 text-t-green border-t-green/30" : "text-grey-400 border-grey-800 hover:border-grey-600"}`}>

@@ -28,6 +28,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class RunExecutor {
 
+    private static final int READBACK_ATTEMPTS = 4;
+    private static final long READBACK_DELAY_MILLIS = 3_000;
+
     private final RunRepository repository;
     private final YouTubeClient youtube;
     private final Translator translator;
@@ -41,6 +44,7 @@ public class RunExecutor {
         run.setStatus(RunStatus.RUNNING);
         run.setStartedAt(Instant.now());
         run.setQuotaBudget(quota.budget());
+        run.setLanguagesTotal(videoIds.size() * run.getLanguages().size());
         repository.save(run);
         try {
             for (String videoId : videoIds) {
@@ -59,6 +63,9 @@ public class RunExecutor {
         } finally {
             run.setFinishedAt(Instant.now());
             run.setQuotaUsed(quota.used());
+            run.setCurrentVideoId(null);
+            run.setCurrentVideoTitle(null);
+            run.setCurrentLanguage(null);
             repository.save(run);
         }
     }
@@ -72,6 +79,8 @@ public class RunExecutor {
             String sourceDescription = video.getSnippet().getDescription() == null ? "" : video.getSnippet().getDescription();
             result.setSourceTitle(sourceTitle);
             result.setThumbnailUrl(youtube.summary(video).getThumbnailUrl());
+            run.setCurrentVideoId(videoId);
+            run.setCurrentVideoTitle(sourceTitle);
 
             String defaultLanguage = video.getSnippet().getDefaultLanguage();
             if (defaultLanguage == null || defaultLanguage.isBlank()) {
@@ -106,13 +115,24 @@ public class RunExecutor {
                             "Not published: " + needed + " quota units needed, " + quota.remaining() + " remaining today"));
                 } else {
                     youtube.publishLocalizations(video, passing);
+                    run.setCurrentLanguage(null);
+                    repository.save(run);
                     for (String lang : passing.keySet()) {
                         LanguageResult lr = languageResults.stream().filter(x -> x.getLanguage().equals(lang)).findFirst().orElseThrow();
-                        Readback readback = youtube.readback(videoId, lang);
-                        lr.setReadbackTitle(readback.getTitle());
-                        lr.setReadbackMatched(lr.getTitle().equals(readback.getTitle()));
+                        for (int attempt = 1; attempt <= READBACK_ATTEMPTS; attempt++) {
+                            Readback readback = youtube.readback(videoId, lang);
+                            lr.setReadbackTitle(readback.getTitle());
+                            lr.setReadbackMatched(lr.getTitle().equals(readback.getTitle()));
+                            if (lr.getReadbackMatched()) {
+                                break;
+                            }
+                            log.info("Readback for {} [{}] not yet propagated (attempt {}/{}): YouTube returned '{}'", videoId, lang, attempt, READBACK_ATTEMPTS, readback.getTitle());
+                            if (attempt < READBACK_ATTEMPTS) {
+                                sleep(READBACK_DELAY_MILLIS);
+                            }
+                        }
                         if (!lr.getReadbackMatched()) {
-                            log.warn("Readback mismatch for {} [{}]: sent '{}', YouTube returned '{}'", videoId, lang, lr.getTitle(), readback.getTitle());
+                            log.warn("Readback mismatch for {} [{}]: sent '{}', YouTube returned '{}'", videoId, lang, lr.getTitle(), lr.getReadbackTitle());
                         }
                     }
                 }
@@ -143,6 +163,8 @@ public class RunExecutor {
                 continue;
             }
             LanguageResult lr = LanguageResult.builder().language(lang).build();
+            run.setCurrentLanguage(lang);
+            repository.save(run);
             long started = System.currentTimeMillis();
             try {
                 Translation translation = translator.translate(run.getSourceLanguage(), lang, title, description, tokens);
@@ -163,8 +185,18 @@ public class RunExecutor {
                 lr.setError(e.getMessage());
             }
             results.add(lr);
+            run.setLanguagesDone(run.getLanguagesDone() + 1);
+            repository.save(run);
         }
         return results;
+    }
+
+    private void sleep(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private void fail(List<LanguageResult> results, String language, String message) {

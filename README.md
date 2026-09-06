@@ -135,6 +135,8 @@ YouTube grants 10,000 units per day per Google Cloud project. `videos.list` cost
 | Each rule is tested | `mvn test` runs `GateTest`: one hand-written bad translation per rule, plus the extractor tests. |
 | It is safe to point at a real channel | Dry run is the default; live writes are fetch-then-update; a public deployment runs with `ALLOW_LIVE_RUNS=false`. |
 
+Note for anyone checking on youtube.com: a localized title is shown to viewers whose YouTube language matches. A logged-in English account sees the English title. Open the watch page with `&hl=es&persist_hl=1` in a private window, or switch YouTube's language, to see the Spanish one; the workspace links to both.
+
 What it does not claim: translation quality, support for anything but YouTube (the one platform whose API accepts localized metadata), or detection of dubbed audio tracks (not exposed by the Data API). Tested on the author's own channel; no outside creators yet.
 
 ## Tests

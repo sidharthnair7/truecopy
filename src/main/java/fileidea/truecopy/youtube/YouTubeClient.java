@@ -170,10 +170,13 @@ public class YouTubeClient {
             merged.putAll(video.getLocalizations());
         }
         merged.putAll(additions);
-        video.setLocalizations(merged);
+        Video payload = new Video();
+        payload.setId(video.getId());
+        payload.setSnippet(video.getSnippet());
+        payload.setLocalizations(merged);
         try {
             Video updated = auth.youtube().videos()
-                    .update(SNIPPET_LOCALIZATIONS, video)
+                    .update(SNIPPET_LOCALIZATIONS, payload)
                     .execute();
             quota.spend(QuotaMeter.UPDATE);
             log.info("Published {} localization(s) to video {}", additions.size(), video.getId());

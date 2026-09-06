@@ -59,6 +59,11 @@ export interface Run {
   quotaUsed: number;
   quotaBudget: number;
   error?: string | null;
+  currentVideoId?: string | null;
+  currentVideoTitle?: string | null;
+  currentLanguage?: string | null;
+  languagesDone?: number;
+  languagesTotal?: number;
   videos: VideoResult[];
 }
 

@@ -32,6 +32,11 @@ public class Run {
     private long quotaUsed;
     private long quotaBudget;
     private String error;
+    private String currentVideoId;
+    private String currentVideoTitle;
+    private String currentLanguage;
+    private int languagesDone;
+    private int languagesTotal;
     @Builder.Default
     private List<VideoResult> videos = new ArrayList<>();
 }
