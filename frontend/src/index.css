@@ -1,10 +1,179 @@
-@import "tailwindcss";
+@import "./components/glass.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════════
+   TrueCopy — Grey Terminal Aesthetic
+   Desaturated grey-on-black, phosphor-green and brick-red
+   as the only accents. Heavy film grain + CRT scanlines.
+   ═══════════════════════════════════════════════════════════ */
 
 :root {
-  color-scheme: light dark;
+  /* ─── Palette ─── */
+  --bg-base: #0A0A0B;
+  --bg-elevated: #131314;
+  --grey-100: #E4E4E4;
+  --grey-400: #8A8D91;
+  --grey-600: #55585C;
+  --grey-800: #2A2C2E;
+  --terminal-green: #C8D6B9;
+  --terminal-amber: #D9C089;
+  --terminal-red: #C97B72;
+
+  /* ─── Fluid Type Scale ─── */
+  --type-hero: clamp(2.75rem, 6vw, 5.5rem);
+  --type-h2: clamp(1.75rem, 3.4vw, 2.75rem);
+  --type-h3: clamp(1.25rem, 2vw, 1.5rem);
+  --type-body: clamp(0.95rem, 1.1vw, 1.05rem);
+  --type-mono: clamp(0.75rem, 0.95vw, 0.85rem);
 }
 
-body {
-  margin: 0;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+/* ─── Base ─── */
+html, body {
+  background: var(--bg-base);
+  color: var(--grey-100);
+  overscroll-behavior: none;
+}
+
+/* ─── Film-grain overlay (heavy, 9% — terminal texture) ─── */
+.grain-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.09;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+}
+
+/* ─── CRT Scanlines overlay ─── */
+.scanlines::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9998;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.025) 0px,
+    rgba(255, 255, 255, 0.025) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  opacity: 0.4;
+}
+
+/* ─── Section ambient mesh-gradient (so glass has something to bend) ─── */
+.mesh-gradient-bg {
+  position: relative;
+}
+.mesh-gradient-bg::before {
+  content: '';
+  position: absolute;
+  inset: -10%;
+  background:
+    radial-gradient(ellipse at 20% 30%, rgba(200, 214, 185, 0.04) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 70%, rgba(201, 123, 114, 0.03) 0%, transparent 60%),
+    radial-gradient(ellipse at 50% 50%, rgba(42, 44, 46, 0.4) 0%, transparent 70%);
+  animation: mesh-drift 20s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes mesh-drift {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-2%, 1%) scale(1.02);
+  }
+  100% {
+    transform: translate(1%, -1%) scale(0.99);
+  }
+}
+
+/* ─── Text legibility scrim for text on glass ─── */
+.text-scrim {
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.12) 0%,
+    rgba(0, 0, 0, 0.04) 100%
+  );
+}
+
+/* ─── Separator line (terminal green tinted) ─── */
+.separator-glow {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(200, 214, 185, 0.2), transparent);
+}
+
+/* ─── Scrollbar (minimal) ─── */
+::-webkit-scrollbar {
+  width: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--grey-800);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--grey-600);
+}
+
+/* ─── Selection ─── */
+::selection {
+  background: rgba(200, 214, 185, 0.2);
+  color: var(--grey-100);
+}
+
+/* ─── Kinetic type (variable font animation) ─── */
+@keyframes type-settle {
+  from {
+    font-variation-settings: 'wght' 300, 'opsz' 72;
+    letter-spacing: 0.02em;
+  }
+  to {
+    font-variation-settings: 'wght' 700, 'opsz' 36;
+    letter-spacing: -0.01em;
+  }
+}
+
+.kinetic-headline {
+  animation: type-settle 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes heading-settle {
+  from {
+    letter-spacing: 0.02em;
+    opacity: 0;
+  }
+  to {
+    letter-spacing: 0em;
+    opacity: 1;
+  }
+}
+
+.heading-reveal {
+  animation: heading-settle 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* ─── Reduced motion ─── */
+@media (prefers-reduced-motion: reduce) {
+  .kinetic-headline {
+    animation: none;
+    font-variation-settings: 'wght' 700, 'opsz' 36;
+    letter-spacing: -0.01em;
+  }
+  .heading-reveal {
+    animation: none;
+    opacity: 1;
+    letter-spacing: 0em;
+  }
+  .mesh-gradient-bg::before {
+    animation: none;
+  }
 }

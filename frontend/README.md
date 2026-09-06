@@ -1,14 +1,23 @@
-# TrueCopy frontend
+# TrueCopy Website — Scaffold
 
-Vite + React + Tailwind v4. The backend runs on `http://localhost:8080`; Vite proxies `/api/*` there, so call relative paths.
+## Setup
 
 ```bash
 npm install
 npm run dev
 ```
 
-Everything the backend exposes is wrapped in `src/lib/api.js` (`api.auth.*`, `api.videos`, `api.video`, `api.readback`, `api.translate.preview`, `api.gate.*`, `api.runs.*`, plus `pollRun(id, cb)` for live run progress). Endpoint reference and payload shapes are in the root `README.md`.
+Open http://localhost:3000 for the landing page, http://localhost:3000/workspace for the product UI stub.
 
-Set `truecopy.frontend-url=http://localhost:5173` in the backend's `application.properties` so the Google OAuth callback redirects back here with `?auth=connected`.
+## What's real vs. mock
 
-For a deployed build set `VITE_API_BASE` to the backend origin.
+- Landing page sections are fully built with placeholder/mock content (screenshots referenced in comments are not included — swap in real assets).
+- Hero 3D scene (`components/HeroScene.tsx`) is a working R3F scene with a WebGL-support + reduced-motion fallback (`StaticFallback`). No WebGPU/TSL/Gaussian splats — kept intentionally simple per the build brief.
+- `/workspace` uses `MOCK_VIDEOS` and `MOCK_REPORT` constants at the top of `app/workspace/page.tsx` — replace these with real API calls to your TrueCopy backend (video list, gate report per run).
+- The Dry Run / Live Run toggle in the workspace is currently local state only — wire it to actually gate whether the backend performs a real `videos.update` call.
+
+## Notes
+
+- Lenis smooth scroll auto-disables when the user has `prefers-reduced-motion` set.
+- The GSAP pinned pipeline section (`components/PipelineSection.tsx`) pins the viewport for its scroll duration — test this carefully on mobile, pinned sections are the most common source of janky scroll bugs. Consider swapping to a simpler non-pinned fade-in sequence on small viewports if it causes issues.
+- All accent colors and spacing tokens live in `tailwind.config.ts` — change the palette there, not inline.

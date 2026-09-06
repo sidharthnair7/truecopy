@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/components/countup.tsx","./src/components/gaterulecard.tsx","./src/components/herobackground.tsx","./src/components/pipelinesection.tsx","./src/components/sectionreveal.tsx","./src/components/smoothscroll.tsx","./src/components/aeroshards/aeroshards.d.ts","./src/pages/home.tsx","./src/pages/workspace.tsx"],"version":"5.9.3"}
