@@ -27,8 +27,8 @@ function Tokens({ tokens }: { tokens: ProtectedTokens }) {
     <div className="flex flex-wrap gap-1.5">
       {groups.flatMap(([label, items]) =>
         items.map((t) => (
-          <span key={label + t} className="glass glass--t3-box px-2 py-1 text-[11px] font-mono text-t-green flex items-center gap-1.5">
-            <span className="text-[9px] text-grey-400 tracking-widest">{label}</span>
+          <span key={label + t} className="glass glass--t3-box px-2 py-1 text-[12px] font-mono text-t-green flex items-center gap-1.5">
+            <span className="text-[10px] text-grey-400 tracking-widest">{label}</span>
             <span className="truncate max-w-[240px]">{t}</span>
           </span>
         )),
@@ -47,13 +47,13 @@ function Verdict({ passed, failures, label }: { passed: boolean; failures: RuleF
       className={`glass glass--t3-box rounded-xl px-4 py-3 text-xs font-mono space-y-2 ${passed ? "glass--verified" : "glass--refused"}`}
     >
       <div className="flex items-center justify-between">
-        <span className="text-[10px] text-grey-400 tracking-widest uppercase">{label}</span>
+        <span className="text-[11px] text-grey-400 tracking-widest uppercase">{label}</span>
         <span className={`text-sm font-semibold ${passed ? "text-t-green" : "text-t-red"}`}>{passed ? "VERIFIED" : "REFUSED"}</span>
       </div>
       {failures.map((f, i) => (
         <div key={i}>
           <div className="flex items-center gap-2 mb-0.5">
-            <span className="text-grey-400 text-[10px]">RULE</span>
+            <span className="text-grey-400 text-[11px]">RULE</span>
             <span className="text-t-red font-medium">{f.rule}</span>
           </div>
           <p className="text-grey-100 break-words leading-relaxed">{f.detail}</p>
@@ -160,23 +160,23 @@ export default function Playground() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <section className="glass glass--t2 rounded-2xl p-5 space-y-4">
-            <h3 className="text-[10px] text-grey-400 uppercase tracking-widest font-medium">Source</h3>
+            <h3 className="text-[11px] text-grey-400 uppercase tracking-widest font-medium">Source</h3>
             <div>
-              <label className="text-[10px] text-grey-600 font-mono block mb-1">title · {title.length}/100</label>
+              <label className="text-[11px] text-grey-600 font-mono block mb-1">title · {title.length}/100</label>
               <input value={title} onChange={(e) => setTitle(e.target.value)} className="w-full bg-bg-elevated border border-grey-800 rounded-lg px-3 py-2 text-sm text-grey-100 focus:border-grey-600 outline-none" />
             </div>
             <div>
-              <label className="text-[10px] text-grey-600 font-mono block mb-1">description · {description.length}/5000</label>
+              <label className="text-[11px] text-grey-600 font-mono block mb-1">description · {description.length}/5000</label>
               <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={9} className="w-full bg-bg-elevated border border-grey-800 rounded-lg px-3 py-2 text-xs text-grey-100 font-mono focus:border-grey-600 outline-none resize-y" />
             </div>
             <div>
-              <span className="text-[10px] text-grey-600 font-mono block mb-2">protected tokens found</span>
+              <span className="text-[11px] text-grey-600 font-mono block mb-2">protected tokens found</span>
               {sourceTokens ? <Tokens tokens={sourceTokens} /> : <span className="text-xs text-grey-600">…</span>}
             </div>
             <div className="flex flex-wrap items-center gap-2 pt-1">
               <div className="flex flex-wrap gap-1.5">
                 {LANGS.map((l) => (
-                  <button key={l} onClick={() => setLanguage(l)} className={`px-2.5 py-1 rounded-full text-[11px] font-mono border transition-all ${language === l ? "bg-t-green/15 text-t-green border-t-green/30" : "text-grey-400 border-grey-800 hover:border-grey-600"}`}>
+                  <button key={l} onClick={() => setLanguage(l)} className={`px-2.5 py-1 rounded-full text-[12px] font-mono border transition-all ${language === l ? "bg-t-green/15 text-t-green border-t-green/30" : "text-grey-400 border-grey-800 hover:border-grey-600"}`}>
                     {l} <span className="opacity-60">{LANGUAGE_NAMES[l]}</span>
                   </button>
                 ))}
@@ -189,8 +189,8 @@ export default function Playground() {
 
           <section className="glass glass--t2 rounded-2xl p-5 space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-[10px] text-grey-400 uppercase tracking-widest font-medium">Translation · {LANGUAGE_NAMES[preview?.language ?? language]}</h3>
-              {preview && <span className="text-[10px] text-grey-600 font-mono">{(preview.translationMillis / 1000).toFixed(1)}s</span>}
+              <h3 className="text-[11px] text-grey-400 uppercase tracking-widest font-medium">Translation · {LANGUAGE_NAMES[preview?.language ?? language]}</h3>
+              {preview && <span className="text-[11px] text-grey-600 font-mono">{(preview.translationMillis / 1000).toFixed(1)}s</span>}
             </div>
             {!preview ? (
               <p className="text-xs text-grey-600 py-12 text-center">Translate something to see the gate at work.</p>
@@ -198,11 +198,11 @@ export default function Playground() {
               <>
                 <Verdict passed={preview.passed} failures={preview.failures} label="gate · model output" />
                 <div>
-                  <label className="text-[10px] text-grey-600 font-mono block mb-1">translated title · {editedTitle.length}/100 · editable</label>
+                  <label className="text-[11px] text-grey-600 font-mono block mb-1">translated title · {editedTitle.length}/100 · editable</label>
                   <input value={editedTitle} onChange={(e) => { setEditedTitle(e.target.value); setRecheck(null); }} className="w-full bg-bg-elevated border border-grey-800 rounded-lg px-3 py-2 text-sm text-grey-100 focus:border-grey-600 outline-none" />
                 </div>
                 <div>
-                  <label className="text-[10px] text-grey-600 font-mono block mb-1">translated description · editable</label>
+                  <label className="text-[11px] text-grey-600 font-mono block mb-1">translated description · editable</label>
                   <textarea value={editedDescription} onChange={(e) => { setEditedDescription(e.target.value); setRecheck(null); }} rows={9} className="w-full bg-bg-elevated border border-grey-800 rounded-lg px-3 py-2 text-xs text-grey-100 font-mono focus:border-grey-600 outline-none resize-y" />
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -219,7 +219,7 @@ export default function Playground() {
           </section>
         </div>
 
-        <p className="text-[11px] text-grey-600 mt-6 max-w-3xl">
+        <p className="text-[12px] text-grey-600 mt-6 max-w-3xl">
           The tool makes no claim about translation quality. It makes a falsifiable claim about structural integrity — URLs, timestamps, @handles, #hashtags, promo codes, and YouTube's length limits — and checks it with no model in the loop. Languages that fail are refused; nothing is published for them.
         </p>
       </div>

@@ -14,8 +14,8 @@
   --bg-base: #0A0A0B;
   --bg-elevated: #131314;
   --grey-100: #E4E4E4;
-  --grey-400: #8A8D91;
-  --grey-600: #55585C;
+  --grey-400: #A3A6AB;
+  --grey-600: #7C8085;
   --grey-800: #2A2C2E;
   --terminal-green: #C8D6B9;
   --terminal-amber: #D9C089;
@@ -34,6 +34,9 @@ html, body {
   background: var(--bg-base);
   color: var(--grey-100);
   overscroll-behavior: none;
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 /* ─── Film-grain overlay (heavy, 9% — terminal texture) ─── */

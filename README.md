@@ -70,6 +70,7 @@ The translator is pluggable. `truecopy.llm.provider=gemini` (default) uses the G
 | POST | `/api/translate/preview` | Translate a pasted title/description into one language and run the gate, without touching YouTube |
 | POST | `/api/gate/check` | Run the gate on a source/translation pair without touching YouTube |
 | POST | `/api/gate/tokens` | Extract protected tokens from any text |
+| POST | `/api/audit` | Run the gate against the localizations already published on the channel — no LLM, no writes, ~1 quota unit per 50 videos |
 | POST | `/api/runs` | Start a run (returns 202; poll the run) |
 | GET | `/api/runs` | All runs, newest first |
 | GET | `/api/runs/{id}` | One run with per-video, per-language outcomes |

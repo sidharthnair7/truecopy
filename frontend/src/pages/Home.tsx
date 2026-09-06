@@ -213,31 +213,20 @@ export default function Home() {
             <SectionReveal staggerIndex={3}>
               <div className="glass glass--t2 glass-lift rounded-2xl p-6 h-72 flex flex-col">
                 <span className="text-[10px] uppercase tracking-wider text-grey-400 mb-4 font-sans">
-                  Viewer feedback
+                  What viewers get instead
                 </span>
                 <div className="flex-1 rounded-xl bg-grey-800/20 border border-grey-800/50 p-4 flex flex-col justify-between">
-                  <div className="space-y-3">
-                    <div className="flex items-start gap-3">
-                      <div className="w-6 h-6 rounded-full bg-grey-600/30 flex-shrink-0 flex items-center justify-center text-[10px] text-grey-100 font-sans">
-                        M
-                      </div>
-                      <div className="text-xs text-grey-400 leading-relaxed font-sans">
-                        <span className="text-grey-100 font-medium">@MarcosBR</span>
-                        <span className="text-grey-600 ml-2">2d ago</span>
-                        <p className="mt-1">
-                          &quot;The auto-translated title doesn&apos;t even make sense
-                          in Portuguese. The link in the description is broken
-                          too.&quot;
-                        </p>
-                      </div>
-                    </div>
+                  <div className="text-xs text-grey-400 leading-relaxed font-sans space-y-3">
+                    <p>
+                      YouTube machine-translates your title and description for foreign viewers by default — and viewers have been publicly asking for a way to turn it off since July 2025.
+                    </p>
+                    <p className="text-grey-100">
+                      A localization you write overrides the machine version. Nobody checks that its links, timestamps and handles survived.
+                    </p>
                   </div>
                   <div className="flex gap-2 mt-3 font-sans">
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-t-red/10 text-t-red/80 border border-t-red/20">
-                      👎 42
-                    </span>
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-grey-800 text-grey-400 border border-grey-600">
-                      Reply
+                      auto-dubbing: all creators, Feb 2026
                     </span>
                   </div>
                 </div>
@@ -394,8 +383,11 @@ export default function Home() {
         <section className="py-32 border-t border-b border-grey-800">
           <div className="max-w-5xl mx-auto px-6">
             <SectionReveal>
-              <p className="text-center text-grey-400 text-sm mb-12 uppercase tracking-wider font-sans">
-                Early access results — single channel, 90 days
+              <p className="text-center text-grey-400 text-sm mb-3 uppercase tracking-wider font-sans">
+                What localized metadata did for one documented channel
+              </p>
+              <p className="text-center text-grey-600 text-xs mb-12 font-sans">
+                Published case study, eight languages, industry-reported figures — not TrueCopy&apos;s own data.
               </p>
             </SectionReveal>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-10 text-center">

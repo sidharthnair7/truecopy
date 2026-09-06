@@ -133,6 +133,32 @@ export interface GateCheck {
   translatedTokens: ProtectedTokens;
 }
 
+export interface AuditLanguage {
+  language: string;
+  title?: string | null;
+  description?: string | null;
+  passed: boolean;
+  failures: RuleFailure[];
+}
+
+export interface AuditVideo {
+  videoId: string;
+  title: string;
+  thumbnailUrl?: string | null;
+  defaultLanguage: string;
+  languages: AuditLanguage[];
+}
+
+export interface AuditResult {
+  checkedAt: string;
+  videosChecked: number;
+  localizationsChecked: number;
+  passed: number;
+  refused: number;
+  quotaUsed: number;
+  videos: AuditVideo[];
+}
+
 export interface Quota {
   used: number;
   budget: number;
@@ -190,6 +216,9 @@ export const api = {
       translatedDescription: string;
     }) => post<GateCheck>("/api/gate/check", body),
     tokens: (text: string) => post<ProtectedTokens>("/api/gate/tokens", { text }),
+  },
+  audit: {
+    run: (body: { videoIds?: string[]; maxVideos?: number }) => post<AuditResult>("/api/audit", body),
   },
   runs: {
     start: (body: {

@@ -5,27 +5,51 @@ import {
   api,
   pollRun,
   LANGUAGE_NAMES,
+  type AuditResult,
   type AuthStatus,
   type Config,
-  type LanguageResult,
-  type Outcome,
   type ProtectedTokens,
   type Quota,
   type Readback,
   type Run,
+  type RuleFailure,
   type VideoDetail,
   type VideoSummary,
 } from "@/lib/api";
+import { TranslationDiff } from "@/components/TranslationDiff";
 
 const PIPELINE_STEPS = ["Generate", "Protect", "Verify", "Refuse", "Publish", "Prove"];
 const LANGUAGE_CHOICES = ["es", "fr", "de", "pt", "it", "ja", "ko", "hi"];
 
 type StepState = "idle" | "running" | "done" | "skipped";
+type ReportOutcome = "PUBLISHED" | "VERIFIED_DRY_RUN" | "VERIFIED_EXISTING" | "REFUSED" | "FAILED" | "SKIPPED";
 
-function pillClass(outcome: Outcome | "PENDING") {
+interface ReportLang {
+  language: string;
+  outcome: ReportOutcome;
+  title?: string | null;
+  description?: string | null;
+  failures: RuleFailure[];
+  readbackTitle?: string | null;
+  readbackMatched?: boolean | null;
+  error?: string | null;
+  millis: number;
+}
+
+interface Report {
+  kind: "run" | "audit";
+  videoId: string;
+  sourceTitle: string;
+  note?: string | null;
+  error?: string | null;
+  languages: ReportLang[];
+}
+
+function pillClass(outcome: ReportOutcome) {
   switch (outcome) {
     case "PUBLISHED":
     case "VERIFIED_DRY_RUN":
+    case "VERIFIED_EXISTING":
       return "glass--verified text-t-green";
     case "REFUSED":
       return "glass--refused text-t-red";
@@ -36,13 +60,15 @@ function pillClass(outcome: Outcome | "PENDING") {
   }
 }
 
-function pillLabel(outcome: Outcome | "PENDING") {
-  return outcome === "VERIFIED_DRY_RUN" ? "VERIFIED · DRY" : outcome;
+function pillLabel(outcome: ReportOutcome) {
+  if (outcome === "VERIFIED_DRY_RUN") return "VERIFIED · DRY";
+  if (outcome === "VERIFIED_EXISTING") return "VERIFIED · LIVE";
+  return outcome;
 }
 
-function StatusPill({ outcome, count }: { outcome: Outcome | "PENDING"; count?: number }) {
+function StatusPill({ outcome, count }: { outcome: ReportOutcome; count?: number }) {
   return (
-    <span className={`glass glass--t3 text-[10px] px-2.5 py-1 rounded-full font-medium whitespace-nowrap ${pillClass(outcome)}`}>
+    <span className={`glass glass--t3 text-[11px] px-2.5 py-1 rounded-full font-medium whitespace-nowrap ${pillClass(outcome)}`}>
       {pillLabel(outcome)}
       {count !== undefined && count > 0 && ` (${count})`}
     </span>
@@ -59,7 +85,7 @@ function TokenChips({ tokens }: { tokens: ProtectedTokens }) {
   ];
   if (tokens.empty) {
     return (
-      <p className="text-xs text-t-amber font-sans">
+      <p className="text-xs text-t-amber">
         Nothing to protect: this description has no URLs, timestamps, handles, hashtags or promo codes. Add some in YouTube Studio to see the gate work.
       </p>
     );
@@ -68,8 +94,8 @@ function TokenChips({ tokens }: { tokens: ProtectedTokens }) {
     <div className="flex flex-wrap gap-1.5">
       {groups.flatMap(([label, items]) =>
         items.map((t) => (
-          <span key={label + t} className="glass glass--t3-box px-2 py-1 text-[11px] font-mono text-t-green flex items-center gap-1.5 max-w-full">
-            <span className="text-[9px] text-grey-400 tracking-widest">{label}</span>
+          <span key={label + t} className="glass glass--t3-box px-2 py-1 text-[12px] font-mono text-t-green flex items-center gap-1.5 max-w-full">
+            <span className="text-[10px] text-grey-400 tracking-widest">{label}</span>
             <span className="truncate max-w-[220px]">{t}</span>
           </span>
         )),
@@ -89,14 +115,45 @@ function stepStates(run: Run | null): StepState[] {
     return ["done", "done", "done", "done", run.dryRun ? "skipped" : "running", "idle"];
   }
   if (run.status === "FAILED") return ["done", "done", "idle", "idle", "idle", "idle"];
-  return [
-    "done",
-    "done",
-    "done",
-    "done",
-    run.dryRun ? "skipped" : anyPublished ? "done" : "skipped",
-    run.dryRun ? "skipped" : anyProved ? "done" : "skipped",
-  ];
+  return ["done", "done", "done", "done", run.dryRun ? "skipped" : anyPublished ? "done" : "skipped", run.dryRun ? "skipped" : anyProved ? "done" : "skipped"];
+}
+
+function runReports(run: Run): Report[] {
+  return run.videos.map((v) => ({
+    kind: "run",
+    videoId: v.videoId,
+    sourceTitle: v.sourceTitle,
+    note: v.defaultLanguageSet ? `defaultLanguage was unset; set to ${v.defaultLanguage}` : null,
+    error: v.error,
+    languages: v.languages.map((l) => ({
+      language: l.language,
+      outcome: l.outcome,
+      title: l.title,
+      description: l.description,
+      failures: l.failures,
+      readbackTitle: l.readbackTitle,
+      readbackMatched: l.readbackMatched,
+      error: l.error,
+      millis: l.translationMillis,
+    })),
+  }));
+}
+
+function auditReports(audit: AuditResult): Report[] {
+  return audit.videos.map((v) => ({
+    kind: "audit",
+    videoId: v.videoId,
+    sourceTitle: v.title,
+    note: v.languages.length === 0 ? "No existing translations on this video" : null,
+    languages: v.languages.map((l) => ({
+      language: l.language,
+      outcome: l.passed ? "VERIFIED_EXISTING" : "REFUSED",
+      title: l.title,
+      description: l.description,
+      failures: l.failures,
+      millis: 0,
+    })),
+  }));
 }
 
 export default function Workspace() {
@@ -112,8 +169,11 @@ export default function Workspace() {
   const [languages, setLanguages] = useState<string[]>([]);
   const [isLive, setIsLive] = useState(false);
   const [activeRun, setActiveRun] = useState<Run | null>(null);
+  const [audit, setAudit] = useState<AuditResult | null>(null);
+  const [auditing, setAuditing] = useState(false);
+  const [reports, setReports] = useState<Report[]>([]);
   const [runs, setRuns] = useState<Run[]>([]);
-  const [expandedLang, setExpandedLang] = useState<string | null>(null);
+  const [focusLang, setFocusLang] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [readback, setReadback] = useState<Readback | null>(null);
   const [readbackLang, setReadbackLang] = useState<string>("en");
@@ -121,6 +181,7 @@ export default function Workspace() {
   const stopPolling = useRef<(() => void) | null>(null);
 
   const isRunning = activeRun?.status === "QUEUED" || activeRun?.status === "RUNNING";
+  const busy = isRunning || auditing;
 
   const refreshQuota = useCallback(() => {
     api.quota().then(setQuota).catch(() => undefined);
@@ -141,6 +202,14 @@ export default function Workspace() {
     } finally {
       setVideosLoading(false);
     }
+  }, []);
+
+  const loadDetail = useCallback((id: string) => {
+    setDetailLoading(true);
+    api.video(id)
+      .then(setDetail)
+      .catch((e) => setError((e as Error).message))
+      .finally(() => setDetailLoading(false));
   }, []);
 
   useEffect(() => {
@@ -165,13 +234,9 @@ export default function Workspace() {
     setDetail(null);
     setReadback(null);
     setReadbackLang("en");
-    setExpandedLang(null);
-    setDetailLoading(true);
-    api.video(selectedId)
-      .then(setDetail)
-      .catch((e) => setError((e as Error).message))
-      .finally(() => setDetailLoading(false));
-  }, [selectedId]);
+    setFocusLang(null);
+    loadDetail(selectedId);
+  }, [selectedId, loadDetail]);
 
   useEffect(() => () => stopPolling.current?.(), []);
 
@@ -187,11 +252,17 @@ export default function Workspace() {
   const toggleLanguage = (code: string) =>
     setLanguages((cur) => (cur.includes(code) ? cur.filter((c) => c !== code) : [...cur, code]));
 
+  const applyRun = (r: Run) => {
+    setActiveRun(r);
+    setReports(runReports(r));
+  };
+
   const startRun = async (scope: "video" | "channel") => {
-    if (isRunning || languages.length === 0) return;
+    if (busy || languages.length === 0) return;
     setError(null);
-    setExpandedLang(null);
+    setFocusLang(null);
     setReadback(null);
+    setAudit(null);
     try {
       const run = await api.runs.start({
         videoIds: scope === "video" && selectedId ? [selectedId] : undefined,
@@ -199,18 +270,39 @@ export default function Workspace() {
         languages,
         dryRun: !isLive,
       });
-      setActiveRun(run);
+      applyRun(run);
       stopPolling.current?.();
       stopPolling.current = pollRun(run.id, (r) => {
-        setActiveRun(r);
+        applyRun(r);
         if (r.status === "COMPLETED" || r.status === "FAILED") {
           refreshQuota();
           loadRuns();
-          if (!r.dryRun) void loadVideos();
+          if (!r.dryRun) {
+            void loadVideos();
+            if (selectedId) loadDetail(selectedId);
+          }
         }
       });
     } catch (e) {
       setError((e as Error).message);
+    }
+  };
+
+  const startAudit = async (scope: "video" | "channel") => {
+    if (busy) return;
+    setError(null);
+    setFocusLang(null);
+    setAuditing(true);
+    try {
+      const result = await api.audit.run({ videoIds: scope === "video" && selectedId ? [selectedId] : undefined, maxVideos: scope === "channel" ? 25 : undefined });
+      setAudit(result);
+      setActiveRun(null);
+      setReports(auditReports(result));
+      refreshQuota();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setAuditing(false);
     }
   };
 
@@ -229,9 +321,13 @@ export default function Workspace() {
 
   const steps = useMemo(() => stepStates(activeRun), [activeRun]);
   const selectedVideo = videos.find((v) => v.id === selectedId) ?? null;
-  const reportVideos = activeRun?.videos ?? [];
-  const selectedReport = reportVideos.find((v) => v.videoId === selectedId) ?? reportVideos[0] ?? null;
-  const publishedLangs = selectedReport?.languages.filter((l) => l.outcome === "PUBLISHED").map((l) => l.language) ?? [];
+  const report = reports.find((r) => r.videoId === selectedId) ?? null;
+  const focused = useMemo(() => {
+    if (!report || report.languages.length === 0) return null;
+    if (focusLang) return report.languages.find((l) => l.language === focusLang) ?? null;
+    return report.languages.find((l) => l.outcome === "REFUSED") ?? report.languages.find((l) => l.outcome !== "SKIPPED") ?? report.languages[0];
+  }, [report, focusLang]);
+  const publishedLangs = report?.languages.filter((l) => l.outcome === "PUBLISHED").map((l) => l.language) ?? [];
   const availableLangs = useMemo(() => {
     const set = new Set<string>(["en", ...(detail ? Object.keys(detail.localizations) : []), ...publishedLangs]);
     return Array.from(set);
@@ -243,34 +339,19 @@ export default function Workspace() {
     <main className="min-h-screen bg-bg flex flex-col font-sans">
       <header className="border-b border-grey-800 px-6 py-3 flex items-center justify-between flex-shrink-0 bg-bg-elevated/40 gap-4">
         <div className="flex items-center gap-4 min-w-0">
-          <Link to="/" className="text-grey-400 hover:text-grey-100 transition-colors text-sm whitespace-nowrap">
-            ← Home
-          </Link>
+          <Link to="/" className="text-grey-400 hover:text-grey-100 transition-colors text-sm whitespace-nowrap">← Home</Link>
           <div className="w-px h-4 bg-grey-800" />
           <h1 className="text-sm font-medium text-grey-100 tracking-tight whitespace-nowrap">
-            TrueCopy
-            <span className="text-grey-600 font-normal ml-1.5 font-mono">/ workspace</span>
+            TrueCopy<span className="text-grey-600 font-normal ml-1.5 font-mono">/ workspace</span>
           </h1>
-          <Link to="/playground" className="text-grey-400 hover:text-t-green transition-colors text-xs font-mono whitespace-nowrap hidden md:inline">
-            gate playground →
-          </Link>
+          <Link to="/playground" className="text-grey-400 hover:text-t-green transition-colors text-xs font-mono whitespace-nowrap hidden md:inline">gate playground →</Link>
         </div>
         <div className="flex items-center gap-3 text-xs min-w-0">
-          {config && (
-            <span className="font-mono text-grey-400 hidden lg:inline truncate">
-              {config.llmProvider} / {config.llmModel}
-            </span>
-          )}
+          {config && <span className="font-mono text-grey-400 hidden lg:inline truncate">{config.llmProvider} / {config.llmModel}</span>}
           {auth?.connected ? (
-            <span className="glass glass--t3 glass--verified px-3 py-1 text-t-green whitespace-nowrap">
-              ● {auth.channelTitle}
-            </span>
+            <span className="glass glass--t3 glass--verified px-3 py-1 text-t-green whitespace-nowrap">● {auth.channelTitle}</span>
           ) : (
-            <button
-              onClick={connect}
-              disabled={!auth?.configured}
-              className="px-4 py-1.5 rounded-full bg-t-green text-bg font-medium hover:opacity-90 disabled:opacity-40 whitespace-nowrap"
-            >
+            <button onClick={connect} disabled={!auth?.configured} className="px-4 py-1.5 rounded-full bg-t-green text-bg font-medium hover:opacity-90 disabled:opacity-40 whitespace-nowrap">
               Connect YouTube
             </button>
           )}
@@ -287,25 +368,19 @@ export default function Workspace() {
       {auth && !auth.connected && (
         <div className="mx-6 mt-4 glass glass--t2 rounded-2xl p-6 text-sm text-grey-400">
           <p className="text-grey-100 mb-2">No channel connected.</p>
-          <p className="mb-4">
-            {auth.configured
-              ? "Connect a YouTube channel to list uploads and run the pipeline. Nothing is written until you run in LIVE mode."
-              : auth.message}
-          </p>
+          <p className="mb-4">{auth.configured ? "Connect a YouTube channel to list uploads and run the pipeline. Nothing is written until you run in LIVE mode." : auth.message}</p>
           <p className="text-xs">
             Want to try the gate without a channel? <Link to="/playground" className="text-t-green underline">Open the playground</Link>.
           </p>
         </div>
       )}
 
-      <div className="flex-1 p-6 grid grid-cols-1 lg:grid-cols-[280px_1fr_360px] gap-6 overflow-auto">
-        <aside className="glass glass--t2 rounded-2xl p-4 h-fit max-h-[calc(100vh-120px)] overflow-y-auto">
+      <div className="flex-1 p-6 grid grid-cols-1 lg:grid-cols-[280px_1fr_360px] gap-6 items-start">
+        <aside className="glass glass--t2 rounded-2xl p-4 max-h-[calc(100vh-120px)] overflow-y-auto">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-[10px] text-grey-400 uppercase tracking-widest font-medium">Videos</h2>
+            <h2 className="text-[11px] text-grey-400 uppercase tracking-widest font-medium">Videos</h2>
             {auth?.connected && (
-              <button onClick={() => void loadVideos()} className="text-[10px] text-grey-600 hover:text-grey-100 font-mono">
-                {videosLoading ? "…" : "refresh"}
-              </button>
+              <button onClick={() => void loadVideos()} className="text-[11px] text-grey-600 hover:text-grey-100 font-mono">{videosLoading ? "…" : "refresh"}</button>
             )}
           </div>
           {videos.length === 0 ? (
@@ -313,16 +388,15 @@ export default function Workspace() {
           ) : (
             <div className="space-y-1.5">
               {videos.map((v) => {
-                const inRun = activeRun?.videos.find((r) => r.videoId === v.id);
-                const refused = inRun?.languages.filter((l) => l.outcome === "REFUSED").length ?? 0;
-                const pub = inRun?.languages.filter((l) => l.outcome === "PUBLISHED" || l.outcome === "VERIFIED_DRY_RUN").length ?? 0;
+                const r = reports.find((x) => x.videoId === v.id);
+                const refused = r?.languages.filter((l) => l.outcome === "REFUSED").length ?? 0;
+                const ok = r?.languages.filter((l) => l.outcome === "PUBLISHED" || l.outcome === "VERIFIED_DRY_RUN" || l.outcome === "VERIFIED_EXISTING").length ?? 0;
+                const okOutcome: ReportOutcome = r?.kind === "audit" ? "VERIFIED_EXISTING" : activeRun?.dryRun ? "VERIFIED_DRY_RUN" : "PUBLISHED";
                 return (
                   <button
                     key={v.id}
                     onClick={() => setSelectedId(v.id)}
-                    className={`w-full text-left p-3 rounded-xl transition-all duration-200 ${
-                      selectedId === v.id ? "bg-grey-800/40 border border-grey-600/30" : "hover:bg-grey-800/20 border border-transparent"
-                    }`}
+                    className={`w-full text-left p-3 rounded-xl transition-all duration-200 ${selectedId === v.id ? "bg-grey-800/40 border border-grey-600/30" : "hover:bg-grey-800/20 border border-transparent"}`}
                   >
                     <div className="flex gap-3">
                       {v.thumbnailUrl && <img src={v.thumbnailUrl} alt="" className="w-16 h-9 object-cover rounded-md flex-shrink-0 opacity-80" />}
@@ -330,10 +404,10 @@ export default function Workspace() {
                         <p className="text-sm text-grey-100 truncate mb-1">{v.title}</p>
                         <div className="flex flex-wrap gap-1 items-center">
                           {v.localizedLanguages.filter((l) => l !== (v.defaultLanguage ?? "en")).map((l) => (
-                            <span key={l} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-grey-800/60 text-grey-400 uppercase">{l}</span>
+                            <span key={l} className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-grey-800/60 text-grey-400 uppercase">{l}</span>
                           ))}
-                          {inRun && refused > 0 && <StatusPill outcome="REFUSED" count={refused} />}
-                          {inRun && refused === 0 && pub > 0 && <StatusPill outcome={activeRun?.dryRun ? "VERIFIED_DRY_RUN" : "PUBLISHED"} />}
+                          {r && refused > 0 && <StatusPill outcome="REFUSED" count={refused} />}
+                          {r && refused === 0 && ok > 0 && <StatusPill outcome={okOutcome} />}
                         </div>
                       </div>
                     </div>
@@ -344,8 +418,8 @@ export default function Workspace() {
           )}
         </aside>
 
-        <section className="glass glass--t2 rounded-2xl p-6 flex flex-col min-h-[480px]">
-          <div className="flex items-start justify-between mb-5 gap-4">
+        <section className="glass glass--t2 rounded-2xl p-6 flex flex-col gap-5">
+          <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <h2 className="text-base font-medium text-grey-100">Pipeline</h2>
               <p className="text-xs text-grey-400 mt-0.5 truncate font-mono">{selectedVideo?.title ?? "Select a video"}</p>
@@ -354,78 +428,50 @@ export default function Workspace() {
               onClick={() => liveAllowed && setIsLive((v) => !v)}
               disabled={!liveAllowed}
               title={liveAllowed ? "Toggle dry run / live run" : "Live writes are disabled on this deployment"}
-              className={`relative w-44 h-11 rounded-full transition-colors duration-400 border flex-shrink-0 ${
-                isLive ? "bg-t-red/10 border-t-red/20" : "bg-grey-800/20 border-grey-600/30"
-              } ${liveAllowed ? "" : "opacity-50 cursor-not-allowed"}`}
+              className={`relative w-44 h-11 rounded-full transition-colors duration-400 border flex-shrink-0 ${isLive ? "bg-t-red/10 border-t-red/20" : "bg-grey-800/20 border-grey-600/30"} ${liveAllowed ? "" : "opacity-50 cursor-not-allowed"}`}
             >
               <motion.div
                 layout
                 transition={{ type: "spring", stiffness: 350, damping: 28 }}
-                className={`absolute top-1.5 w-[82px] h-8 rounded-full flex items-center justify-center text-xs font-semibold tracking-wide ${
-                  isLive ? "bg-t-red text-bg shadow-[0_0_15px_rgba(201,123,114,0.4)]" : "bg-t-green text-bg shadow-[0_0_15px_rgba(200,214,185,0.4)]"
-                }`}
+                className={`absolute top-1.5 w-[82px] h-8 rounded-full flex items-center justify-center text-xs font-semibold tracking-wide ${isLive ? "bg-t-red text-bg shadow-[0_0_15px_rgba(201,123,114,0.4)]" : "bg-t-green text-bg shadow-[0_0_15px_rgba(200,214,185,0.4)]"}`}
                 style={isLive ? { left: "auto", right: 6 } : { left: 6, right: "auto" }}
               >
                 {isLive ? "LIVE RUN" : "DRY RUN"}
               </motion.div>
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[10px] text-grey-400/50">DRY</span>
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] text-grey-400/50">LIVE</span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[11px] text-grey-400/50">DRY</span>
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[11px] text-grey-400/50">LIVE</span>
             </button>
           </div>
 
-          <div className="mb-5">
+          <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] text-grey-400 uppercase tracking-widest">Protected in this video</span>
-              {detailLoading && <span className="text-[10px] text-grey-600 font-mono">reading…</span>}
+              <span className="text-[11px] text-grey-400 uppercase tracking-widest">Protected in this video</span>
+              {detailLoading && <span className="text-[11px] text-grey-600 font-mono">reading…</span>}
             </div>
             {detail ? <TokenChips tokens={detail.protectedTokens} /> : <p className="text-xs text-grey-600">—</p>}
-            {detail && detail.description && (
-              <p className="text-[11px] text-grey-600 mt-2 line-clamp-2 font-mono whitespace-pre-line">{detail.description}</p>
-            )}
           </div>
 
-          <div className="mb-5">
-            <span className="text-[10px] text-grey-400 uppercase tracking-widest block mb-2">Target languages</span>
+          <div>
+            <span className="text-[11px] text-grey-400 uppercase tracking-widest block mb-2">Target languages</span>
             <div className="flex flex-wrap gap-1.5">
               {LANGUAGE_CHOICES.map((code) => {
                 const on = languages.includes(code);
                 return (
-                  <button
-                    key={code}
-                    onClick={() => toggleLanguage(code)}
-                    disabled={isRunning}
-                    className={`px-3 py-1 rounded-full text-xs font-mono border transition-all ${
-                      on ? "bg-t-green/15 text-t-green border-t-green/30" : "text-grey-400 border-grey-800 hover:border-grey-600"
-                    }`}
-                  >
-                    {code} <span className="text-[10px] opacity-60">{LANGUAGE_NAMES[code]}</span>
+                  <button key={code} onClick={() => toggleLanguage(code)} disabled={busy} className={`px-3 py-1 rounded-full text-xs font-mono border transition-all ${on ? "bg-t-green/15 text-t-green border-t-green/30" : "text-grey-400 border-grey-800 hover:border-grey-600"}`}>
+                    {code} <span className="text-[11px] opacity-60">{LANGUAGE_NAMES[code]}</span>
                   </button>
                 );
               })}
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2 mb-5">
+          <div className="flex flex-wrap gap-2">
             {PIPELINE_STEPS.map((step, i) => {
               const state = steps[i];
               return (
-                <motion.div
-                  key={step}
-                  animate={{ opacity: state === "idle" ? 0.45 : state === "skipped" ? 0.35 : 1 }}
-                  transition={{ duration: 0.3 }}
-                  className={`glass glass--t3-box rounded-xl px-3 py-2.5 flex-1 min-w-[84px] text-center relative overflow-hidden ${
-                    state === "running" ? "glass--verified" : ""
-                  }`}
-                >
-                  {state === "running" && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: [0, 0.12, 0] }}
-                      transition={{ duration: 0.9, repeat: Infinity }}
-                      className="absolute inset-0 bg-t-green rounded-xl"
-                    />
-                  )}
-                  <span className="text-[10px] text-grey-400 block mb-0.5 relative z-10 font-mono tracking-widest">{String(i + 1).padStart(2, "0")}</span>
+                <motion.div key={step} animate={{ opacity: state === "idle" ? 0.45 : state === "skipped" ? 0.35 : 1 }} transition={{ duration: 0.3 }} className={`glass glass--t3-box rounded-xl px-3 py-2.5 flex-1 min-w-[84px] text-center relative overflow-hidden ${state === "running" ? "glass--verified" : ""}`}>
+                  {state === "running" && <motion.div initial={{ opacity: 0 }} animate={{ opacity: [0, 0.12, 0] }} transition={{ duration: 0.9, repeat: Infinity }} className="absolute inset-0 bg-t-green rounded-xl" />}
+                  <span className="text-[11px] text-grey-400 block mb-0.5 relative z-10 font-mono tracking-widest">{String(i + 1).padStart(2, "0")}</span>
                   <span className="text-xs text-grey-100 relative z-10 flex items-center justify-center gap-1">
                     {state === "done" && <span className="text-t-green">✓</span>}
                     {state === "skipped" && <span className="text-grey-600">–</span>}
@@ -436,46 +482,35 @@ export default function Workspace() {
             })}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
-            <button
-              onClick={() => void startRun("video")}
-              disabled={isRunning || !auth?.connected || !selectedId || languages.length === 0}
-              className={`py-3 rounded-xl text-sm font-medium transition-all duration-200 border disabled:opacity-40 disabled:cursor-not-allowed ${
-                isLive
-                  ? "bg-t-red/15 text-t-red hover:bg-t-red/25 border-t-red/20"
-                  : "bg-t-green/15 text-t-green hover:bg-t-green/25 border-t-green/20"
-              }`}
-            >
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <button onClick={() => void startRun("video")} disabled={busy || !auth?.connected || !selectedId || languages.length === 0} className={`py-3 rounded-xl text-sm font-medium transition-all duration-200 border disabled:opacity-40 disabled:cursor-not-allowed ${isLive ? "bg-t-red/15 text-t-red hover:bg-t-red/25 border-t-red/20" : "bg-t-green/15 text-t-green hover:bg-t-green/25 border-t-green/20"}`}>
               {isRunning ? "Running…" : isLive ? "Publish this video (LIVE)" : "Dry run this video"}
             </button>
-            <button
-              onClick={() => void startRun("channel")}
-              disabled={isRunning || !auth?.connected || languages.length === 0}
-              className="py-3 rounded-xl text-sm font-medium transition-all duration-200 border border-grey-800 text-grey-400 hover:text-grey-100 hover:border-grey-600 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
+            <button onClick={() => void startRun("channel")} disabled={busy || !auth?.connected || languages.length === 0} className="py-3 rounded-xl text-sm font-medium transition-all duration-200 border border-grey-800 text-grey-400 hover:text-grey-100 hover:border-grey-600 disabled:opacity-40 disabled:cursor-not-allowed">
               {isLive ? "Publish latest 5 (LIVE)" : "Dry run latest 5"}
+            </button>
+            <button onClick={() => void startAudit("channel")} disabled={busy || !auth?.connected} title="Run the gate against the translations already published on the channel. No LLM, no writes." className="py-3 rounded-xl text-sm font-medium transition-all duration-200 border border-t-amber/30 text-t-amber hover:bg-t-amber/10 disabled:opacity-40 disabled:cursor-not-allowed">
+              {auditing ? "Auditing…" : "Audit existing translations"}
             </button>
           </div>
 
           <AnimatePresence>
             {isLive && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden mb-4">
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
                 <div className="glass glass--t3-box glass--amber rounded-lg px-4 py-3 text-xs text-t-amber">
                   ⚠ Live mode writes localizations to YouTube with one <span className="font-mono">videos.update</span> per video (50 quota units), then reads each language back to prove it landed.
                 </div>
               </motion.div>
             )}
             {!liveAllowed && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-4">
-                <div className="glass glass--t3-box rounded-lg px-4 py-3 text-xs text-grey-400">
-                  Live writes are disabled on this deployment. Dry runs, the gate playground and the run history are open.
-                </div>
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                <div className="glass glass--t3-box rounded-lg px-4 py-3 text-xs text-grey-400">Live writes are disabled on this deployment. Dry runs, audits, the gate playground and the run history are open.</div>
               </motion.div>
             )}
           </AnimatePresence>
 
           {activeRun && (
-            <div className="glass glass--t3-box rounded-xl px-4 py-3 mb-4 text-xs font-mono flex flex-wrap gap-x-5 gap-y-1 text-grey-400">
+            <div className="glass glass--t3-box rounded-xl px-4 py-3 text-xs font-mono flex flex-wrap gap-x-5 gap-y-1 text-grey-400">
               <span>run <span className="text-grey-100">{activeRun.id}</span></span>
               <span>{activeRun.status}</span>
               <span>{activeRun.videosProcessed}/{activeRun.videosRequested} videos</span>
@@ -485,9 +520,41 @@ export default function Workspace() {
               {activeRun.error && <span className="text-t-red break-all">{activeRun.error}</span>}
             </div>
           )}
+          {audit && (
+            <div className="glass glass--t3-box glass--amber rounded-xl px-4 py-3 text-xs font-mono flex flex-wrap gap-x-5 gap-y-1 text-grey-400">
+              <span className="text-t-amber">audit</span>
+              <span>{audit.videosChecked} videos</span>
+              <span>{audit.localizationsChecked} existing translations checked</span>
+              <span className="text-t-green">{audit.passed} intact</span>
+              <span className="text-t-red">{audit.refused} broken</span>
+              <span>{audit.quotaUsed} quota units · no LLM</span>
+            </div>
+          )}
 
-          <div className="mt-auto pt-4 border-t border-grey-800/50">
-            <div className="flex justify-between text-[10px] text-grey-400 mb-2">
+          {detail && focused && (
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[11px] text-grey-400 uppercase tracking-widest">Source vs. {LANGUAGE_NAMES[focused.language] ?? focused.language}</span>
+                <span className="text-[11px] text-grey-600 font-mono">{report?.kind === "audit" ? "existing translation on YouTube" : activeRun?.dryRun ? "candidate · not written" : "written to YouTube"}</span>
+              </div>
+              <TranslationDiff
+                sourceTitle={detail.title}
+                sourceDescription={detail.description}
+                tokens={detail.protectedTokens}
+                language={focused.language}
+                languageName={LANGUAGE_NAMES[focused.language] ?? focused.language}
+                translatedTitle={focused.title}
+                translatedDescription={focused.description}
+                passed={focused.outcome === "REFUSED" ? false : focused.outcome === "FAILED" || focused.outcome === "SKIPPED" ? null : true}
+                failures={focused.failures}
+                readbackTitle={focused.readbackTitle}
+                readbackMatched={focused.readbackMatched}
+              />
+            </div>
+          )}
+
+          <div className="pt-4 border-t border-grey-800/50">
+            <div className="flex justify-between text-[11px] text-grey-400 mb-2">
               <span>YouTube quota used this session</span>
               <span className="font-mono">{quota ? `${quota.used.toLocaleString()} / ${quota.budget.toLocaleString()} units` : "…"}</span>
             </div>
@@ -497,38 +564,51 @@ export default function Workspace() {
           </div>
         </section>
 
-        <aside className="space-y-6 h-fit max-h-[calc(100vh-120px)] overflow-y-auto">
+        <aside className="space-y-6 max-h-[calc(100vh-120px)] overflow-y-auto">
           <div className="glass glass--t2 rounded-2xl p-4">
-            <h2 className="text-[10px] text-grey-400 mb-4 uppercase tracking-widest font-medium">Gate report</h2>
-            {!selectedReport ? (
-              <p className="text-xs text-grey-600 text-center py-8">{isRunning ? "Translating and verifying…" : "Run the pipeline to see the report"}</p>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-[11px] text-grey-400 uppercase tracking-widest font-medium">Gate report</h2>
+              {report && <span className="text-[11px] text-grey-600 font-mono">{report.kind === "audit" ? "audit" : activeRun?.dryRun ? "dry run" : "live"}</span>}
+            </div>
+            {!report ? (
+              <p className="text-xs text-grey-600 text-center py-8">{busy ? (auditing ? "Checking existing translations…" : "Translating and verifying…") : "Run the pipeline or an audit to see the report"}</p>
             ) : (
               <div className="space-y-1.5">
-                {reportVideos.length > 1 && <p className="text-[10px] text-grey-600 font-mono mb-2 truncate">{selectedReport.sourceTitle}</p>}
-                {selectedReport.error && <p className="text-xs text-t-red font-mono mb-2 break-words">{selectedReport.error}</p>}
-                {selectedReport.defaultLanguageSet && (
-                  <p className="text-[10px] text-t-amber font-mono mb-2">defaultLanguage was unset; set to {selectedReport.defaultLanguage}</p>
-                )}
-                {selectedReport.languages.map((r) => (
-                  <LanguageRow key={r.language} result={r} expanded={expandedLang === r.language} onToggle={() => setExpandedLang(expandedLang === r.language ? null : r.language)} />
-                ))}
+                {report.error && <p className="text-xs text-t-red font-mono mb-2 break-words">{report.error}</p>}
+                {report.note && <p className="text-[11px] text-t-amber font-mono mb-2">{report.note}</p>}
+                {report.languages.map((r) => {
+                  const active = focused?.language === r.language;
+                  return (
+                    <button
+                      key={r.language}
+                      onClick={() => setFocusLang(r.language)}
+                      className={`w-full flex items-center justify-between p-3 rounded-xl border transition-colors gap-2 ${active ? "bg-grey-800/40 border-grey-600/30" : "bg-grey-800/20 hover:bg-grey-800/40 border-transparent hover:border-grey-600/20"}`}
+                    >
+                      <span className="text-sm text-grey-100 font-mono flex items-baseline gap-2 min-w-0">
+                        <span className="uppercase">{r.language}</span>
+                        <span className="text-[11px] text-grey-600 truncate">{LANGUAGE_NAMES[r.language] ?? r.language}</span>
+                      </span>
+                      <span className="flex items-center gap-2">
+                        {r.readbackMatched === true && <span className="text-[11px] text-t-green font-mono" title="YouTube returned exactly what was sent">proved</span>}
+                        {r.readbackMatched === false && <span className="text-[11px] text-t-amber font-mono">mismatch</span>}
+                        {r.millis > 0 && <span className="text-[11px] text-grey-600 font-mono">{(r.millis / 1000).toFixed(1)}s</span>}
+                        <StatusPill outcome={r.outcome} count={r.failures.length || undefined} />
+                      </span>
+                    </button>
+                  );
+                })}
+                {focused?.error && <p className="text-xs text-t-amber font-mono break-words px-1 pt-1">{focused.error}</p>}
               </div>
             )}
           </div>
 
           {detail && auth?.connected && (
             <div className="glass glass--t2 rounded-2xl p-4">
-              <h2 className="text-[10px] text-grey-400 mb-1 uppercase tracking-widest font-medium">What a viewer sees</h2>
-              <p className="text-[10px] text-grey-600 mb-3">Read live from YouTube with <span className="font-mono">hl=</span> — this is YouTube confirming it, not the tool claiming it.</p>
+              <h2 className="text-[11px] text-grey-400 mb-1 uppercase tracking-widest font-medium">What a viewer sees</h2>
+              <p className="text-[11px] text-grey-600 mb-3">Read live from YouTube with <span className="font-mono">hl=</span> — this is YouTube confirming it, not the tool claiming it.</p>
               <div className="flex flex-wrap gap-1.5 mb-3">
                 {availableLangs.map((l) => (
-                  <button
-                    key={l}
-                    onClick={() => void showReadback(l)}
-                    className={`px-2.5 py-1 rounded-full text-[11px] font-mono border transition-all ${
-                      readbackLang === l && readback ? "bg-t-green/15 text-t-green border-t-green/30" : "text-grey-400 border-grey-800 hover:border-grey-600"
-                    }`}
-                  >
+                  <button key={l} onClick={() => void showReadback(l)} className={`px-2.5 py-1 rounded-full text-[12px] font-mono border transition-all ${readbackLang === l && readback ? "bg-t-green/15 text-t-green border-t-green/30" : "text-grey-400 border-grey-800 hover:border-grey-600"}`}>
                     {l}
                   </button>
                 ))}
@@ -541,14 +621,14 @@ export default function Workspace() {
                   ) : readback ? (
                     <>
                       <p className="text-sm text-grey-100 leading-snug mb-1">{readback.title}</p>
-                      <p className="text-[11px] text-grey-400 whitespace-pre-line line-clamp-4">{readback.description}</p>
-                      <p className="text-[9px] text-grey-600 font-mono mt-2 uppercase">hl={readback.hl} · videos.list</p>
+                      <p className="text-[12px] text-grey-400 whitespace-pre-line line-clamp-4">{readback.description}</p>
+                      <p className="text-[10px] text-grey-600 font-mono mt-2 uppercase">hl={readback.hl} · videos.list</p>
                     </>
                   ) : (
                     <>
                       <p className="text-sm text-grey-100 leading-snug mb-1">{detail.title}</p>
-                      <p className="text-[11px] text-grey-400 whitespace-pre-line line-clamp-4">{detail.description || "(no description)"}</p>
-                      <p className="text-[9px] text-grey-600 font-mono mt-2 uppercase">source · pick a language above</p>
+                      <p className="text-[12px] text-grey-400 whitespace-pre-line line-clamp-4">{detail.description || "(no description)"}</p>
+                      <p className="text-[10px] text-grey-600 font-mono mt-2 uppercase">source · pick a language above</p>
                     </>
                   )}
                 </div>
@@ -558,18 +638,19 @@ export default function Workspace() {
 
           {runs.length > 0 && (
             <div className="glass glass--t2 rounded-2xl p-4">
-              <h2 className="text-[10px] text-grey-400 mb-3 uppercase tracking-widest font-medium">Run history</h2>
+              <h2 className="text-[11px] text-grey-400 mb-3 uppercase tracking-widest font-medium">Run history</h2>
               <div className="space-y-1">
                 {runs.slice(0, 8).map((r) => (
                   <button
                     key={r.id}
                     onClick={() => {
-                      setActiveRun(r);
-                      setExpandedLang(null);
+                      setAudit(null);
+                      applyRun(r);
+                      setFocusLang(null);
                       const first = r.videos[0]?.videoId;
                       if (first && videos.some((v) => v.id === first)) setSelectedId(first);
                     }}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-[11px] font-mono flex items-center gap-3 hover:bg-grey-800/30 ${activeRun?.id === r.id ? "bg-grey-800/40" : ""}`}
+                    className={`w-full text-left px-3 py-2 rounded-lg text-[12px] font-mono flex items-center gap-3 hover:bg-grey-800/30 ${activeRun?.id === r.id ? "bg-grey-800/40" : ""}`}
                   >
                     <span className="text-grey-100">{r.id}</span>
                     <span className={r.dryRun ? "text-grey-400" : "text-t-red"}>{r.dryRun ? "dry" : "LIVE"}</span>
@@ -584,61 +665,5 @@ export default function Workspace() {
         </aside>
       </div>
     </main>
-  );
-}
-
-function LanguageRow({ result, expanded, onToggle }: { result: LanguageResult; expanded: boolean; onToggle: () => void }) {
-  const name = LANGUAGE_NAMES[result.language] ?? result.language;
-  return (
-    <div className="rounded-xl overflow-hidden">
-      <button onClick={onToggle} className="w-full flex items-center justify-between p-3 bg-grey-800/20 hover:bg-grey-800/40 transition-colors rounded-xl border border-transparent hover:border-grey-600/20 gap-2">
-        <span className="text-sm text-grey-100 font-mono flex items-baseline gap-2 min-w-0">
-          <span className="uppercase">{result.language}</span>
-          <span className="text-[10px] text-grey-600 truncate">{name}</span>
-        </span>
-        <span className="flex items-center gap-2">
-          {result.readbackMatched === true && <span className="text-[10px] text-t-green font-mono" title="YouTube returned exactly what was sent">proved</span>}
-          {result.readbackMatched === false && <span className="text-[10px] text-t-amber font-mono">mismatch</span>}
-          <StatusPill outcome={result.outcome} count={result.failures.length || undefined} />
-        </span>
-      </button>
-      <AnimatePresence>
-        {expanded && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }} className="overflow-hidden">
-            <div className={`glass glass--t3-box mx-1 rounded-lg px-4 py-3 text-xs space-y-3 font-mono mt-1 ${result.outcome === "REFUSED" ? "glass--refused" : result.outcome === "FAILED" ? "glass--amber" : "glass--verified"}`}>
-              {result.failures.map((f, i) => (
-                <div key={i}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-grey-400 text-[10px]">RULE</span>
-                    <span className="text-t-red font-medium">{f.rule}</span>
-                  </div>
-                  <p className="text-grey-100 break-words leading-relaxed">{f.detail}</p>
-                </div>
-              ))}
-              {result.error && <p className="text-t-amber break-words">{result.error}</p>}
-              {result.title && (
-                <div>
-                  <span className="text-[10px] text-grey-400 block mb-0.5">translated title</span>
-                  <p className={result.outcome === "REFUSED" ? "text-grey-400" : "text-t-green"}>{result.title}</p>
-                </div>
-              )}
-              {result.description && (
-                <div>
-                  <span className="text-[10px] text-grey-400 block mb-0.5">translated description</span>
-                  <p className="text-grey-100 whitespace-pre-line line-clamp-6 leading-relaxed">{result.description}</p>
-                </div>
-              )}
-              {result.readbackTitle && (
-                <div>
-                  <span className="text-[10px] text-grey-400 block mb-0.5">YouTube returned (hl={result.language})</span>
-                  <p className={result.readbackMatched ? "text-t-green" : "text-t-amber"}>{result.readbackTitle}</p>
-                </div>
-              )}
-              {result.translationMillis > 0 && <p className="text-[10px] text-grey-600">{(result.translationMillis / 1000).toFixed(1)}s</p>}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
   );
 }
