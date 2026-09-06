@@ -125,6 +125,18 @@ YouTube grants 10,000 units per day per Google Cloud project. `videos.list` cost
 - Existing localizations are preserved (fetch-then-update); a language already present is overwritten only if it is in the run's target list.
 - No claim about translation quality. Commercial tools such as ReTranslate gate on human review per language; TrueCopy gates on a deterministic machine check and refuses on its own, which is the only mechanism that scales past the languages the creator can read.
 
+## For judges: verify each claim in under a minute
+
+| Claim | How to check |
+|---|---|
+| The gate refuses and names the rule | Open `/playground`, press **Translate + verify**, then **break it for me**, then **Re-check gate**. No account needed. |
+| It writes to a real channel and YouTube confirms it | In `/workspace` after a live run, click a language on **What a viewer sees**. That card is `videos.list` with `hl=`, straight from YouTube. |
+| Existing translations can rot and be caught | Press **Audit existing translations**. No LLM, about one quota unit, every published localization checked against the source. |
+| Each rule is tested | `mvn test` runs `GateTest`: one hand-written bad translation per rule, plus the extractor tests. |
+| It is safe to point at a real channel | Dry run is the default; live writes are fetch-then-update; a public deployment runs with `ALLOW_LIVE_RUNS=false`. |
+
+What it does not claim: translation quality, support for anything but YouTube (the one platform whose API accepts localized metadata), or detection of dubbed audio tracks (not exposed by the Data API). Tested on the author's own channel; no outside creators yet.
+
 ## Tests
 
 ```bash
