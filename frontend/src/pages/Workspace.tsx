@@ -352,7 +352,7 @@ export default function Workspace() {
   const liveAllowed = config?.liveRunsAllowed ?? true;
 
   return (
-    <main className="min-h-screen bg-bg flex flex-col font-sans">
+    <main className="min-h-screen lg:h-screen bg-bg flex flex-col font-sans lg:overflow-hidden">
       <header className="border-b border-grey-800 px-6 py-3 flex items-center justify-between flex-shrink-0 bg-bg-elevated/40 gap-4">
         <div className="flex items-center gap-4 min-w-0">
           <Link to="/" className="text-grey-400 hover:text-grey-100 transition-colors text-sm whitespace-nowrap">← Home</Link>
@@ -425,8 +425,8 @@ export default function Workspace() {
         </div>
       )}
 
-      <div className="flex-1 p-6 grid grid-cols-1 lg:grid-cols-[280px_1fr_360px] gap-6 items-start">
-        <aside className="glass glass--t2 rounded-2xl p-4 max-h-[calc(100vh-120px)] overflow-y-auto">
+      <div className="flex-1 min-h-0 p-6 grid grid-cols-1 lg:grid-cols-[280px_1fr_360px] gap-6 items-start lg:items-stretch">
+        <aside className="glass glass--t2 rounded-2xl p-4 lg:h-full lg:min-h-0 overflow-y-auto">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-[11px] text-grey-400 uppercase tracking-widest font-medium">Videos</h2>
             {auth?.connected && (
@@ -468,7 +468,7 @@ export default function Workspace() {
           )}
         </aside>
 
-        <section className="glass glass--t2 rounded-2xl p-6 flex flex-col gap-5">
+        <section className="glass glass--t2 rounded-2xl p-6 flex flex-col gap-5 lg:h-full lg:min-h-0 overflow-y-auto">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <h2 className="text-base font-medium text-grey-100">Pipeline</h2>
@@ -641,7 +641,7 @@ export default function Workspace() {
           </div>
         </section>
 
-        <aside className="space-y-6 max-h-[calc(100vh-120px)] overflow-y-auto">
+        <aside className="space-y-6 lg:h-full lg:min-h-0 overflow-y-auto pr-1">
           <div className="glass glass--t2 rounded-2xl p-4">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-[11px] text-grey-400 uppercase tracking-widest font-medium">Gate report</h2>

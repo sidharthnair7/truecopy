@@ -153,25 +153,26 @@ public class GeminiTranslator implements Translator {
         return raw.contains("PerDay");
     }
 
+    /**
+     * Sliding window over the last minute. Google allows the whole allowance to
+     * be spent in a burst and only then makes you wait, so spacing calls evenly
+     * would add up to a minute of dead time to a three language run for no gain.
+     */
     private void acquireSlot() {
         int limit = Math.max(1, properties.getGemini().getRequestsPerMinute());
-        long gap = WINDOW_MILLIS / limit;
         long waitMillis;
         synchronized (recentCalls) {
             long now = System.currentTimeMillis();
             while (!recentCalls.isEmpty() && now - recentCalls.peekFirst() >= WINDOW_MILLIS) {
                 recentCalls.pollFirst();
             }
-            long sinceLast = recentCalls.isEmpty() ? Long.MAX_VALUE : now - recentCalls.peekLast();
-            if (recentCalls.size() < limit && sinceLast >= gap) {
+            if (recentCalls.size() < limit) {
                 recentCalls.addLast(now);
                 return;
             }
-            long untilWindow = recentCalls.size() < limit ? 0 : WINDOW_MILLIS - (now - recentCalls.peekFirst());
-            long untilGap = sinceLast >= gap ? 0 : gap - sinceLast;
-            waitMillis = Math.max(untilWindow, untilGap) + 250;
+            waitMillis = WINDOW_MILLIS - (now - recentCalls.peekFirst()) + 250;
         }
-        log.info("Gemini pacing at {} req/min, waiting {} ms", limit, waitMillis);
+        log.info("Gemini window of {} req/min is full, waiting {} ms", limit, waitMillis);
         sleep(waitMillis);
         acquireSlot();
     }

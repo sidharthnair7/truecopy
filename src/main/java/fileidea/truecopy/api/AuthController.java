@@ -121,6 +121,20 @@ public class AuthController {
         return Map.of("connected", false);
     }
 
+    @PostMapping("/share-demo")
+    public ResponseEntity<Map<String, String>> shareDemo() {
+        if (!properties.isAllowDemoShare()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("message", "Demo sharing is disabled. Start the server with ALLOW_DEMO_SHARE=true to publish the connected channel as the read-only demo."));
+        }
+        if (auth.isDemoSession()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Connect your own channel first; a demo session has nothing to share."));
+        }
+        auth.shareAsDemo();
+        return ResponseEntity.ok(Map.of("message", "This channel is now the read-only demo channel for visitors who have not connected their own."));
+    }
+
     @GetMapping("/export")
     public ResponseEntity<Map<String, String>> export() {
         if (!properties.isAllowTokenExport()) {

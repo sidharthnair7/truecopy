@@ -29,8 +29,10 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class RunExecutor {
 
-    private static final int READBACK_ATTEMPTS = 4;
-    private static final long READBACK_DELAY_MILLIS = 3_000;
+    private static final int READBACK_ATTEMPTS = 5;
+    // YouTube usually propagates a localization within about a second, so back
+    // off from a short first wait instead of sleeping a flat three seconds.
+    private static final long READBACK_DELAY_MILLIS = 800;
 
     private final RunRepository repository;
     private final YouTubeClient youtube;
@@ -138,7 +140,7 @@ public class RunExecutor {
                             }
                             log.info("Readback for {} [{}] not yet propagated (attempt {}/{}): YouTube returned '{}'", videoId, lang, attempt, READBACK_ATTEMPTS, readback.getTitle());
                             if (attempt < READBACK_ATTEMPTS) {
-                                sleep(READBACK_DELAY_MILLIS);
+                                sleep(READBACK_DELAY_MILLIS * attempt);
                             }
                         }
                         if (!lr.getReadbackMatched()) {

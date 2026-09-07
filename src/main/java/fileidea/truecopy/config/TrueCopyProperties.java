@@ -17,6 +17,7 @@ public class TrueCopyProperties {
     private long quotaBudget = 10_000;
     private boolean allowLiveRuns = true;
     private boolean allowTokenExport = false;
+    private boolean allowDemoShare = false;
     private Google google = new Google();
     private Llm llm = new Llm();
     private Gemini gemini = new Gemini();

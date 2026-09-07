@@ -119,6 +119,20 @@ public class GoogleAuthService {
         }
     }
 
+    /**
+     * Copy the calling session's refresh token into the demo slot, so visitors
+     * who have not connected anything can explore this channel read-only.
+     */
+    public void shareAsDemo() {
+        String token = credential().map(Credential::getRefreshToken).orElseThrow(NotConnectedException::new);
+        try {
+            flow().createAndStoreCredential(new TokenResponse().setRefreshToken(token), UserKey.DEMO);
+            log.info("Connected channel published as the read-only demo channel");
+        } catch (IOException e) {
+            throw new UncheckedIOException("Could not store the demo credential", e);
+        }
+    }
+
     private Credential demoCredential() throws IOException {
         Credential demo = flow().loadCredential(UserKey.DEMO);
         if (demo != null) {

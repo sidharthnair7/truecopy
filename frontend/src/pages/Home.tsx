@@ -112,7 +112,7 @@ export default function Home() {
                     to="/workspace"
                     className="px-6 py-3 rounded-full bg-t-green text-bg text-sm font-medium hover:opacity-90 transition-all duration-200 shadow-[0_6px_18px_-6px_rgba(63,107,69,0.45)]"
                   >
-                    Connect your channel
+                    Open the workspace
                   </Link>
                 </div>
               </div>
@@ -427,7 +427,7 @@ export default function Home() {
               to="/workspace"
               className="inline-block px-8 py-4 rounded-full bg-t-green text-bg font-medium hover:opacity-90 transition-all duration-200 shadow-[0_6px_18px_-6px_rgba(63,107,69,0.45)]"
             >
-              Connect your channel
+              Open the workspace
             </Link>
           </SectionReveal>
         </section>
