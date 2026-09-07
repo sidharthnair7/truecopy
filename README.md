@@ -97,7 +97,7 @@ Each language in a run ends as one of `PUBLISHED`, `VERIFIED_DRY_RUN`, `REFUSED`
 
 ## Deploy (one container, judge-safe)
 
-The `Dockerfile` builds the frontend, then the jar, then runs it on a JRE. Any Docker host works (Render, Railway, Fly); `render.yaml` is a ready Blueprint and `DEPLOY.md` is the click-by-click. Environment:
+The `Dockerfile` builds the frontend, then the jar, then runs it on a JRE. Any Docker host works (Render, Railway, Fly), and `render.yaml` is a ready Blueprint. Environment:
 
 | Variable | Purpose |
 |---|---|
