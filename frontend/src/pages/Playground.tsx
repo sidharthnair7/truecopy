@@ -15,6 +15,26 @@ Follow me @sidreon and use #TrueCopy #Editing`;
 
 const LANGS = ["es", "fr", "de", "pt", "it", "ja", "ko", "hi"];
 
+const SEEDED_TITLE = "Cómo edito vídeos 10 veces más rápido";
+const SEEDED_DESCRIPTION = `Consigue el pack de presets aquí: https://example.com/presets?ref=yt
+Usa el código SAVE20 para un 20% de descuento.
+
+0:00 Introducción
+2:15 El flujo de trabajo
+12:34 Etalonaje de color
+
+Sígueme en @sidreon y usa #TrueCopy #Editing`;
+
+const SEEDED_PREVIEW: Preview = {
+  language: "es",
+  title: SEEDED_TITLE,
+  description: SEEDED_DESCRIPTION,
+  passed: true,
+  failures: [],
+  protectedTokens: { urls: [], timestamps: [], handles: [], hashtags: [], promoCodes: [], empty: true },
+  translationMillis: 0,
+};
+
 function Tokens({ tokens }: { tokens: ProtectedTokens }) {
   const groups: [string, string[]][] = [
     ["URL", tokens.urls],
@@ -69,9 +89,10 @@ export default function Playground() {
   const [description, setDescription] = useState(SAMPLE_DESCRIPTION);
   const [language, setLanguage] = useState("es");
   const [sourceTokens, setSourceTokens] = useState<ProtectedTokens | null>(null);
-  const [preview, setPreview] = useState<Preview | null>(null);
-  const [editedTitle, setEditedTitle] = useState("");
-  const [editedDescription, setEditedDescription] = useState("");
+  const [preview, setPreview] = useState<Preview | null>(SEEDED_PREVIEW);
+  const [seeded, setSeeded] = useState(true);
+  const [editedTitle, setEditedTitle] = useState(SEEDED_TITLE);
+  const [editedDescription, setEditedDescription] = useState(SEEDED_DESCRIPTION);
   const [recheck, setRecheck] = useState<GateCheck | null>(null);
   const [busy, setBusy] = useState<"translate" | "check" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -90,6 +111,7 @@ export default function Playground() {
     try {
       const p = await api.translate.preview({ title, description, language });
       setPreview(p);
+      setSeeded(false);
       setEditedTitle(p.title);
       setEditedDescription(p.description);
     } catch (e) {
@@ -190,13 +212,19 @@ export default function Playground() {
           <section className="glass glass--t2 rounded-2xl p-5 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-[11px] text-grey-400 uppercase tracking-widest font-medium">Translation · {LANGUAGE_NAMES[preview?.language ?? language]}</h3>
-              {preview && <span className="text-[11px] text-grey-600 font-mono">{(preview.translationMillis / 1000).toFixed(1)}s</span>}
+              {preview && !seeded && <span className="text-[11px] text-grey-600 font-mono">{(preview.translationMillis / 1000).toFixed(1)}s</span>}
+              {seeded && <span className="text-[11px] text-grey-600 font-mono">bundled example · no model call yet</span>}
             </div>
             {!preview ? (
               <p className="text-xs text-grey-600 py-12 text-center">Translate something to see the gate at work.</p>
             ) : (
               <>
-                <Verdict passed={preview.passed} failures={preview.failures} label="gate · model output" />
+                <Verdict passed={preview.passed} failures={preview.failures} label={seeded ? "gate · bundled example" : "gate · model output"} />
+                {seeded && (
+                  <p className="text-[11px] text-grey-600 leading-relaxed">
+                    This Spanish translation ships with the page so the gate is usable without an API call. Edit it, or press <span className="text-t-red">break it for me</span>, then re-check. Press <span className="text-t-green">Translate + verify</span> to replace it with a live model translation in any language.
+                  </p>
+                )}
                 <div>
                   <label className="text-[11px] text-grey-600 font-mono block mb-1">translated title · {editedTitle.length}/100 · editable</label>
                   <input value={editedTitle} onChange={(e) => { setEditedTitle(e.target.value); setRecheck(null); }} className="w-full bg-bg-elevated border border-grey-800 rounded-lg px-3 py-2 text-sm text-grey-100 focus:border-grey-600 outline-none" />
