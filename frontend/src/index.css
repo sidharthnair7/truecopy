@@ -4,22 +4,22 @@
 @tailwind utilities;
 
 /* ═══════════════════════════════════════════════════════════
-   TrueCopy — Grey Terminal Aesthetic
-   Desaturated grey-on-black, phosphor-green and brick-red
-   as the only accents. Heavy film grain + CRT scanlines.
+   TrueCopy — Paper Terminal Aesthetic
+   Ink-on-paper, deep green and brick red as the only accents.
+   Light paper grain, no scanlines.
    ═══════════════════════════════════════════════════════════ */
 
 :root {
   /* ─── Palette ─── */
-  --bg-base: #0A0A0B;
-  --bg-elevated: #131314;
-  --grey-100: #E4E4E4;
-  --grey-400: #A3A6AB;
-  --grey-600: #7C8085;
-  --grey-800: #2A2C2E;
-  --terminal-green: #C8D6B9;
-  --terminal-amber: #D9C089;
-  --terminal-red: #C97B72;
+  --bg-base: #FAFAF9;
+  --bg-elevated: #FFFFFF;
+  --grey-100: #18181B;
+  --grey-400: #52525B;
+  --grey-600: #5F6570;
+  --grey-800: #E4E4E7;
+  --terminal-green: #3F6B45;
+  --terminal-amber: #7A5B12;
+  --terminal-red: #A63A2E;
 
   /* ─── Fluid Type Scale ─── */
   --type-hero: clamp(2.75rem, 6vw, 5.5rem);
@@ -45,8 +45,8 @@ html, body {
   inset: 0;
   pointer-events: none;
   z-index: 9999;
-  opacity: 0.09;
-  mix-blend-mode: overlay;
+  opacity: 0.035;
+  mix-blend-mode: multiply;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-repeat: repeat;
 }
@@ -60,12 +60,12 @@ html, body {
   z-index: 9998;
   background: repeating-linear-gradient(
     to bottom,
-    rgba(255, 255, 255, 0.025) 0px,
-    rgba(255, 255, 255, 0.025) 1px,
+    rgba(24, 24, 27, 0.02) 0px,
+    rgba(24, 24, 27, 0.02) 1px,
     transparent 1px,
     transparent 3px
   );
-  opacity: 0.4;
+  opacity: 0.25;
 }
 
 /* ─── Section ambient mesh-gradient (so glass has something to bend) ─── */
@@ -77,9 +77,9 @@ html, body {
   position: absolute;
   inset: -10%;
   background:
-    radial-gradient(ellipse at 20% 30%, rgba(200, 214, 185, 0.04) 0%, transparent 60%),
-    radial-gradient(ellipse at 80% 70%, rgba(201, 123, 114, 0.03) 0%, transparent 60%),
-    radial-gradient(ellipse at 50% 50%, rgba(42, 44, 46, 0.4) 0%, transparent 70%);
+    radial-gradient(ellipse at 20% 30%, rgba(63, 107, 69, 0.07) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 70%, rgba(166, 58, 46, 0.05) 0%, transparent 60%),
+    radial-gradient(ellipse at 50% 50%, rgba(228, 228, 231, 0.55) 0%, transparent 70%);
   animation: mesh-drift 20s ease-in-out infinite alternate;
   pointer-events: none;
   z-index: 0;
@@ -101,15 +101,15 @@ html, body {
 .text-scrim {
   background: linear-gradient(
     180deg,
-    rgba(0, 0, 0, 0.12) 0%,
-    rgba(0, 0, 0, 0.04) 100%
+    rgba(255, 255, 255, 0.65) 0%,
+    rgba(255, 255, 255, 0.25) 100%
   );
 }
 
 /* ─── Separator line (terminal green tinted) ─── */
 .separator-glow {
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(200, 214, 185, 0.2), transparent);
+  background: linear-gradient(90deg, transparent, rgba(63, 107, 69, 0.28), transparent);
 }
 
 /* ─── Scrollbar (minimal) ─── */
@@ -129,7 +129,7 @@ html, body {
 
 /* ─── Selection ─── */
 ::selection {
-  background: rgba(200, 214, 185, 0.2);
+  background: rgba(63, 107, 69, 0.18);
   color: var(--grey-100);
 }
 
@@ -179,4 +179,53 @@ html, body {
   .mesh-gradient-bg::before {
     animation: none;
   }
+}
+
+/* ─── Ambient hero field: paper ground + isoline canvas ─── */
+.ambient-field {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 50% 40%, #FFFFFF 0%, #F5F5F3 100%);
+}
+
+.ambient-wash {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  will-change: transform;
+}
+.ambient-wash--a {
+  width: 52vw; height: 52vw; left: -6%; top: -10%;
+  background: radial-gradient(circle, rgba(63, 107, 69, 0.16) 0%, rgba(63, 107, 69, 0) 70%);
+  animation: ambient-drift-a 16s ease-in-out infinite alternate;
+}
+.ambient-wash--b {
+  width: 44vw; height: 44vw; right: -8%; bottom: -12%;
+  background: radial-gradient(circle, rgba(166, 58, 46, 0.11) 0%, rgba(166, 58, 46, 0) 70%);
+  animation: ambient-drift-b 20s ease-in-out infinite alternate;
+}
+
+@keyframes ambient-drift-a {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  100% { transform: translate3d(8%, 6%, 0) scale(1.12); }
+}
+@keyframes ambient-drift-b {
+  0%   { transform: translate3d(0, 0, 0) scale(1.06); }
+  100% { transform: translate3d(-9%, -7%, 0) scale(0.95); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient-wash { animation: none; }
+}
+
+/* Fade the contour field into the page, strongest at the bottom, so the
+   hero dissolves into the next section the way the reference does. */
+.ambient-fade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 92% 82% at 50% 2%, rgba(250, 250, 249, 0) 0%, rgba(250, 250, 249, 0.94) 76%),
+    linear-gradient(to bottom, rgba(250, 250, 249, 0) 52%, rgba(250, 250, 249, 0.85) 84%, #FAFAF9 100%);
 }

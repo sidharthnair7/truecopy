@@ -5,15 +5,15 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        bg: "#0A0A0B",
-        "bg-elevated": "#131314",
-        "grey-100": "#E4E4E4",
-        "grey-400": "#A3A6AB",
-        "grey-600": "#7C8085",
-        "grey-800": "#2A2C2E",
-        "t-green": "#C8D6B9",
-        "t-amber": "#D9C089",
-        "t-red": "#C97B72",
+        bg: "#FAFAF9",
+        "bg-elevated": "#FFFFFF",
+        "grey-100": "#18181B",
+        "grey-400": "#52525B",
+        "grey-600": "#5F6570",
+        "grey-800": "#E4E4E7",
+        "t-green": "#3F6B45",
+        "t-amber": "#7A5B12",
+        "t-red": "#A63A2E",
       },
       fontFamily: {
         display: ["Newsreader", "Georgia", "serif"],

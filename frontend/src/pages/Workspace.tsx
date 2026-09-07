@@ -478,7 +478,7 @@ export default function Workspace() {
               <motion.div
                 layout
                 transition={{ type: "spring", stiffness: 350, damping: 28 }}
-                className={`absolute top-1.5 w-[82px] h-8 rounded-full flex items-center justify-center text-xs font-semibold tracking-wide ${isLive ? "bg-t-red text-bg shadow-[0_0_15px_rgba(201,123,114,0.4)]" : "bg-t-green text-bg shadow-[0_0_15px_rgba(200,214,185,0.4)]"}`}
+                className={`absolute top-1.5 w-[82px] h-8 rounded-full flex items-center justify-center text-xs font-semibold tracking-wide ${isLive ? "bg-t-red text-bg shadow-[0_4px_12px_-4px_rgba(166,58,46,0.5)]" : "bg-t-green text-bg shadow-[0_4px_12px_-4px_rgba(63,107,69,0.5)]"}`}
                 style={isLive ? { left: "auto", right: 6 } : { left: 6, right: "auto" }}
               >
                 {isLive ? "LIVE RUN" : "DRY RUN"}

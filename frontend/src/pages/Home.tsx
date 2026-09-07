@@ -60,9 +60,9 @@ export default function Home() {
                 className="w-full h-full"
                 style={{
                   background: `
-                    radial-gradient(ellipse at 40% 45%, rgba(200, 214, 185, 0.08) 0%, transparent 55%),
-                    radial-gradient(ellipse at 65% 60%, rgba(201, 123, 114, 0.04) 0%, transparent 50%),
-                    radial-gradient(ellipse at 50% 50%, #0d1512 0%, #0A0A0B 100%)
+                    radial-gradient(ellipse at 40% 45%, rgba(63, 107, 69, 0.10) 0%, transparent 55%),
+                    radial-gradient(ellipse at 65% 60%, rgba(166, 58, 46, 0.06) 0%, transparent 50%),
+                    radial-gradient(ellipse at 50% 50%, #FFFFFF 0%, #F2F2F0 100%)
                   `,
                 }}
               />
@@ -110,7 +110,7 @@ export default function Home() {
                   </Link>
                   <Link
                     to="/workspace"
-                    className="px-6 py-3 rounded-full bg-t-green text-bg text-sm font-medium hover:opacity-90 transition-all duration-200 shadow-[0_0_20px_rgba(200,214,185,0.4)]"
+                    className="px-6 py-3 rounded-full bg-t-green text-bg text-sm font-medium hover:opacity-90 transition-all duration-200 shadow-[0_6px_18px_-6px_rgba(63,107,69,0.45)]"
                   >
                     Connect your channel
                   </Link>
@@ -425,7 +425,7 @@ export default function Home() {
             </p>
             <Link
               to="/workspace"
-              className="inline-block px-8 py-4 rounded-full bg-t-green text-bg font-medium hover:opacity-90 transition-all duration-200 shadow-[0_0_20px_rgba(200,214,185,0.4)]"
+              className="inline-block px-8 py-4 rounded-full bg-t-green text-bg font-medium hover:opacity-90 transition-all duration-200 shadow-[0_6px_18px_-6px_rgba(63,107,69,0.45)]"
             >
               Connect your channel
             </Link>

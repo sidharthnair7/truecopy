@@ -10,7 +10,7 @@ import java.util.List;
 public class TrueCopyProperties {
 
     private String frontendUrl = "/workspace";
-    private List<String> corsOrigins = List.of("http://localhost:5173");
+    private List<String> corsOrigins = List.of("*");
     private String runsDir = "./runs";
     private String sourceLanguage = "en";
     private List<String> languages = List.of("es", "fr", "ja");
