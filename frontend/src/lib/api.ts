@@ -108,6 +108,7 @@ export interface Config {
 export interface AuthStatus {
   configured: boolean;
   connected: boolean;
+  demo?: boolean;
   channelId?: string | null;
   channelTitle?: string | null;
   redirectUri: string;

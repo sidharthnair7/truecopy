@@ -364,11 +364,16 @@ export default function Workspace() {
         </div>
         <div className="flex items-center gap-3 text-xs min-w-0">
           {config && <span className="font-mono text-grey-400 hidden lg:inline truncate">{config.llmProvider} / {config.llmModel}</span>}
-          {auth?.connected ? (
+          {auth?.connected && auth.demo && (
+            <span className="glass glass--t3 glass--amber px-3 py-1 text-t-amber whitespace-nowrap" title="Read-only. Connect your own channel to publish.">
+              demo channel · {auth.channelTitle} · read-only
+            </span>
+          )}
+          {auth?.connected && !auth.demo ? (
             <span className="glass glass--t3 glass--verified px-3 py-1 text-t-green whitespace-nowrap">● {auth.channelTitle}</span>
           ) : (
             <button onClick={connect} disabled={!auth?.configured} className="px-4 py-1.5 rounded-full bg-t-green text-bg font-medium hover:opacity-90 disabled:opacity-40 whitespace-nowrap">
-              Connect YouTube
+              {auth?.demo ? "Connect your channel" : "Connect YouTube"}
             </button>
           )}
         </div>

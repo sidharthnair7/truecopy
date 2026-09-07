@@ -51,12 +51,15 @@ public class AuthController {
         }
         try {
             ChannelSummary channel = youtube.channel();
+            boolean demo = auth.isDemoSession();
             return AuthStatus.builder()
                     .configured(true)
                     .connected(true)
+                    .demo(demo)
                     .channelId(channel.getId())
                     .channelTitle(channel.getTitle())
                     .redirectUri(redirectUri)
+                    .message(demo ? "Exploring the demo channel, read-only. Connect your own channel to publish." : null)
                     .build();
         } catch (Exception e) {
             String reason = e.getCause() instanceof GoogleJsonResponseException google

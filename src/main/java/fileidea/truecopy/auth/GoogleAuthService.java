@@ -33,7 +33,6 @@ import java.util.Optional;
 @Service
 public class GoogleAuthService {
 
-    private static final String USER_ID = "truecopy";
     private static final List<String> SCOPES = List.of(YouTubeScopes.YOUTUBE_FORCE_SSL);
 
     private final TrueCopyProperties properties;
@@ -68,8 +67,8 @@ public class GoogleAuthService {
             GoogleTokenResponse response = flow().newTokenRequest(code)
                     .setRedirectUri(properties.getGoogle().getRedirectUri())
                     .execute();
-            flow().createAndStoreCredential(response, USER_ID);
-            log.info("YouTube channel connected");
+            flow().createAndStoreCredential(response, UserKey.current());
+            log.info("YouTube channel connected for session {}", UserKey.current());
         } catch (IOException e) {
             throw new UncheckedIOException("Token exchange failed", e);
         }
@@ -80,9 +79,9 @@ public class GoogleAuthService {
             return Optional.empty();
         }
         try {
-            Credential credential = flow().loadCredential(USER_ID);
+            Credential credential = flow().loadCredential(UserKey.current());
             if (credential == null) {
-                credential = seedFromRefreshToken();
+                credential = demoCredential();
             }
             if (credential == null) {
                 return Optional.empty();
@@ -99,14 +98,49 @@ public class GoogleAuthService {
         return credential().isPresent();
     }
 
+    /**
+     * True when this visitor is riding the shared demo channel instead of one
+     * they connected themselves. Demo sessions are read-only by policy: they
+     * can audit, dry run and read back, but never publish.
+     */
+    public boolean isDemoSession() {
+        if (!isConfigured()) {
+            return false;
+        }
+        String key = UserKey.current();
+        if (UserKey.DEMO.equals(key)) {
+            // Presenting the demo key as your own cookie must not confer ownership.
+            return true;
+        }
+        try {
+            return flow().loadCredential(key) == null && demoCredential() != null;
+        } catch (IOException e) {
+            throw new UncheckedIOException("Could not load stored credential", e);
+        }
+    }
+
+    private Credential demoCredential() throws IOException {
+        Credential demo = flow().loadCredential(UserKey.DEMO);
+        if (demo != null) {
+            return demo;
+        }
+        String seed = properties.getGoogle().getRefreshToken();
+        if (seed == null || seed.isBlank()) {
+            return null;
+        }
+        TokenResponse response = new TokenResponse().setRefreshToken(seed.strip());
+        log.info("Demo channel credential seeded from GOOGLE_REFRESH_TOKEN");
+        return flow().createAndStoreCredential(response, UserKey.DEMO);
+    }
+
     public Optional<String> refreshToken() {
         return credential().map(Credential::getRefreshToken);
     }
 
     public void disconnect() {
         try {
-            flow().getCredentialDataStore().delete(USER_ID);
-            log.info("YouTube channel disconnected");
+            flow().getCredentialDataStore().delete(UserKey.current());
+            log.info("YouTube channel disconnected for session {}", UserKey.current());
         } catch (IOException e) {
             throw new UncheckedIOException("Could not delete stored credential", e);
         }
@@ -117,17 +151,6 @@ public class GoogleAuthService {
         return new YouTube.Builder(transport, jsonFactory, credential)
                 .setApplicationName(properties.getGoogle().getApplicationName())
                 .build();
-    }
-
-    private Credential seedFromRefreshToken() throws IOException {
-        String seed = properties.getGoogle().getRefreshToken();
-        if (seed == null || seed.isBlank()) {
-            return null;
-        }
-        TokenResponse response = new TokenResponse().setRefreshToken(seed.strip());
-        Credential credential = flow().createAndStoreCredential(response, USER_ID);
-        log.info("YouTube credential seeded from GOOGLE_REFRESH_TOKEN");
-        return credential;
     }
 
     private GoogleAuthorizationCodeFlow flow() {

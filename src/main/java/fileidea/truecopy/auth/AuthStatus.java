@@ -8,6 +8,7 @@ import lombok.Value;
 public class AuthStatus {
     boolean configured;
     boolean connected;
+    boolean demo;
     String channelId;
     String channelTitle;
     String redirectUri;

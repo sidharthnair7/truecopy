@@ -1,5 +1,6 @@
 package fileidea.truecopy.run;
 
+import fileidea.truecopy.auth.UserKey;
 import com.google.api.services.youtube.model.Video;
 import com.google.api.services.youtube.model.VideoLocalization;
 import fileidea.truecopy.gate.Gate;
@@ -39,7 +40,16 @@ public class RunExecutor {
     private final QuotaMeter quota;
 
     @Async
-    public void execute(String runId, List<String> videoIds) {
+    public void execute(String runId, List<String> videoIds, String userKey) {
+        UserKey.set(userKey);
+        try {
+            runInternal(runId, videoIds);
+        } finally {
+            UserKey.clear();
+        }
+    }
+
+    private void runInternal(String runId, List<String> videoIds) {
         Run run = repository.find(runId).orElseThrow();
         run.setStatus(RunStatus.RUNNING);
         run.setStartedAt(Instant.now());

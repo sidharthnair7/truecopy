@@ -4,6 +4,7 @@ import fileidea.truecopy.api.dto.RunRequest;
 import fileidea.truecopy.auth.GoogleAuthService;
 import fileidea.truecopy.auth.LiveRunsDisabledException;
 import fileidea.truecopy.auth.NotConnectedException;
+import fileidea.truecopy.auth.UserKey;
 import fileidea.truecopy.config.TrueCopyProperties;
 import fileidea.truecopy.youtube.QuotaMeter;
 import fileidea.truecopy.youtube.YouTubeClient;
@@ -31,6 +32,10 @@ public class RunService {
         }
         if (!request.isDryRun() && !properties.isAllowLiveRuns()) {
             throw new LiveRunsDisabledException();
+        }
+        if (!request.isDryRun() && auth.isDemoSession()) {
+            throw new LiveRunsDisabledException(
+                    "You are exploring the demo channel, which is read-only. Connect your own channel to publish.");
         }
         List<String> languages = request.getLanguages() == null || request.getLanguages().isEmpty()
                 ? properties.getLanguages()
@@ -61,7 +66,7 @@ public class RunService {
                 .quotaUsed(quota.used())
                 .build();
         repository.save(run);
-        executor.execute(run.getId(), videoIds);
+        executor.execute(run.getId(), videoIds, UserKey.current());
         return run;
     }
 
