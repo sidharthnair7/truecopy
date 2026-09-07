@@ -20,6 +20,7 @@ COPY --from=build /app/target/truecopy-*.jar app.jar
 ENV PORT=8080
 ENV RUNS_DIR=/data/runs
 ENV TOKENS_DIR=/data/tokens
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=70 -XX:+UseSerialGC -Xss512k"
 RUN mkdir -p /data/runs /data/tokens
 EXPOSE 8080
 CMD ["java", "-jar", "app.jar"]

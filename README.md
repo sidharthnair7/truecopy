@@ -1,5 +1,7 @@
 # TrueCopy
 
+[![CI](https://github.com/sidharthnair7/truecopy/actions/workflows/ci.yml/badge.svg)](https://github.com/sidharthnair7/truecopy/actions/workflows/ci.yml)
+
 TrueCopy publishes a YouTube channel's titles and descriptions in other languages and **refuses to publish any language it cannot prove is a true copy** of the original: every URL, timestamp, @handle, #hashtag and promo code intact. After publishing it reads the video back from YouTube in the target language, so the proof comes from YouTube, not from the tool.
 
 YouTube gave every creator free auto-dubbing in February 2026. It did not localize their titles. TrueCopy closes that gap safely.
@@ -95,7 +97,7 @@ Each language in a run ends as one of `PUBLISHED`, `VERIFIED_DRY_RUN`, `REFUSED`
 
 ## Deploy (one container, judge-safe)
 
-The `Dockerfile` builds the frontend, then the jar, then runs it on a JRE. Any Docker host works (Render, Railway, Fly). Environment:
+The `Dockerfile` builds the frontend, then the jar, then runs it on a JRE. Any Docker host works (Render, Railway, Fly); `render.yaml` is a ready Blueprint and `DEPLOY.md` is the click-by-click. Environment:
 
 | Variable | Purpose |
 |---|---|
@@ -126,6 +128,8 @@ YouTube grants 10,000 units per day per Google Cloud project. `videos.list` cost
 - No claim about translation quality. Commercial tools such as ReTranslate gate on human review per language; TrueCopy gates on a deterministic machine check and refuses on its own, which is the only mechanism that scales past the languages the creator can read.
 
 ## For judges: verify each claim in under a minute
+
+On the public instance, start with **Audit existing translations**. One translation on the demo channel (German, on the Rack Demo video) was edited by hand in YouTube Studio after publishing, breaking a link and a chapter timestamp, which is how translations rot in practice. The gate refuses it and names both rules. The Spanish, French and Japanese translations on the same video were published by TrueCopy and pass.
 
 | Claim | How to check |
 |---|---|

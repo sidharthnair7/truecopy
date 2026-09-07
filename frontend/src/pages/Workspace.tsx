@@ -179,6 +179,22 @@ export default function Workspace() {
   const [readbackLang, setReadbackLang] = useState<string>("en");
   const [readbackLoading, setReadbackLoading] = useState(false);
   const stopPolling = useRef<(() => void) | null>(null);
+  const [showGuide, setShowGuide] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("truecopy.guide.dismissed") !== "1";
+    } catch {
+      return true;
+    }
+  });
+
+  const dismissGuide = () => {
+    setShowGuide(false);
+    try {
+      localStorage.setItem("truecopy.guide.dismissed", "1");
+    } catch {
+      /* private mode */
+    }
+  };
 
   const isRunning = activeRun?.status === "QUEUED" || activeRun?.status === "RUNNING";
   const busy = isRunning || auditing;
@@ -362,6 +378,35 @@ export default function Workspace() {
         <div className="mx-6 mt-4 glass glass--t3-box glass--refused px-4 py-3 text-xs text-t-red font-mono flex items-start justify-between gap-4">
           <span className="break-words">{error}</span>
           <button onClick={() => setError(null)} className="text-grey-400 hover:text-grey-100">✕</button>
+        </div>
+      )}
+
+      {auth?.connected && showGuide && (
+        <div className="mx-6 mt-4 glass glass--t2 rounded-2xl px-5 py-4 flex flex-wrap items-start gap-x-8 gap-y-3">
+          <div className="flex items-baseline gap-3 min-w-0">
+            <span className="text-[11px] text-t-green uppercase tracking-widest font-medium whitespace-nowrap">Start here</span>
+            {!liveAllowed && <span className="text-[11px] text-grey-600 font-mono whitespace-nowrap">public instance · live writes off</span>}
+          </div>
+          <ol className="flex flex-wrap gap-x-8 gap-y-2 text-sm text-grey-100 list-none">
+            <li className="flex items-start gap-2">
+              <span className="font-mono text-t-amber">1</span>
+              <span>
+                <button onClick={() => void startAudit("channel")} disabled={busy} className="text-t-amber hover:underline disabled:no-underline disabled:opacity-60">Audit existing translations</button>
+                <span className="text-grey-400"> — the gate checks every translation already on this channel. No LLM, one second.</span>
+              </span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="font-mono text-t-green">2</span>
+              <span className="text-grey-400">Click a language on <span className="text-grey-100">What a viewer sees</span> — YouTube returns what it serves in that language.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="font-mono text-grey-400">3</span>
+              <span className="text-grey-400">
+                <Link to="/playground" className="text-grey-100 hover:underline">Try the gate on your own text</Link> — then break the translation and re-check.
+              </span>
+            </li>
+          </ol>
+          <button onClick={dismissGuide} className="ml-auto text-[11px] text-grey-600 hover:text-grey-100 font-mono self-start">dismiss</button>
         </div>
       )}
 
