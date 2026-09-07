@@ -364,7 +364,7 @@ export default function Workspace() {
 
   return (
     <main className="min-h-screen lg:h-screen bg-bg flex flex-col font-sans lg:overflow-hidden">
-      <header className="border-b border-grey-800 px-6 py-3 flex items-center justify-between flex-shrink-0 bg-bg-elevated/40 gap-4">
+      <header className="border-b border-grey-800 px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between flex-shrink-0 bg-bg-elevated/40 gap-x-4 gap-y-2 overflow-x-hidden">
         <div className="flex items-center gap-4 min-w-0">
           <Link to="/" className="text-grey-400 hover:text-grey-100 transition-colors text-sm whitespace-nowrap">← Home</Link>
           <div className="w-px h-4 bg-grey-800" />
@@ -376,7 +376,7 @@ export default function Workspace() {
         <div className="flex items-center gap-3 text-xs min-w-0">
           {config && <span className="font-mono text-grey-400 hidden lg:inline truncate">{config.llmProvider} / {config.llmModel}</span>}
           {auth?.connected && auth.demo && (
-            <span className="glass glass--t3 glass--amber px-3 py-1 text-t-amber whitespace-nowrap" title="Read-only. Connect your own channel to publish.">
+            <span className="glass glass--t3 glass--amber px-3 py-1 text-t-amber whitespace-nowrap truncate max-w-[52vw] sm:max-w-none" title="Read-only. Connect your own channel to publish.">
               demo channel · {auth.channelTitle} · read-only
             </span>
           )}
