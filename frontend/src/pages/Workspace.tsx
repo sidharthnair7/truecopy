@@ -483,8 +483,12 @@ export default function Workspace() {
               >
                 {isLive ? "LIVE RUN" : "DRY RUN"}
               </motion.div>
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[11px] text-grey-400/50">DRY</span>
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[11px] text-grey-400/50">LIVE</span>
+              {isLive && (
+                <span className="absolute left-5 top-1/2 -translate-y-1/2 text-[11px] font-medium tracking-wide text-grey-600 pointer-events-none">DRY</span>
+              )}
+              {!isLive && (
+                <span className="absolute right-5 top-1/2 -translate-y-1/2 text-[11px] font-medium tracking-wide text-grey-600 pointer-events-none">LIVE</span>
+              )}
             </button>
           </div>
 
