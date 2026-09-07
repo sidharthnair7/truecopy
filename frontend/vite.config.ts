@@ -21,5 +21,6 @@ export default defineConfig({
   build: {
     outDir: '../src/main/resources/static',
     emptyOutDir: true,
+    cssTarget: ['chrome111', 'edge111', 'firefox115', 'safari18'],
   },
 })
