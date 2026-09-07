@@ -6,6 +6,12 @@ TrueCopy publishes a YouTube channel's titles and descriptions in other language
 
 YouTube gave every creator free auto-dubbing in February 2026. It did not localize their titles. TrueCopy closes that gap safely.
 
+![The gate refusing a German translation, naming both broken rules and the exact missing tokens](docs/screenshots/refusal.png)
+*A German translation that was edited by hand after publishing. The audit runs the gate over every translation already on the channel, with no model involved, and refuses this one on two rules: a shop link pointing at the wrong domain, and a chapter timestamp rewritten as prose. It names the exact tokens that went missing.*
+
+![A completed live run, with YouTube returning the published Spanish title and the tool confirming an exact match](docs/screenshots/readback.png)
+*A live run on the same video. Spanish, French and Japanese were published and then proved: TrueCopy asked YouTube what it now serves with `hl=es` and compared the answer to what it sent. The last line is YouTube's response, not the tool's claim.*
+
 ```
 enumerate uploads -> for each video, for each language:
   GENERATE   translate title + description (Gemini or Claude, structured JSON output)
