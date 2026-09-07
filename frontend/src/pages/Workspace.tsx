@@ -179,6 +179,7 @@ export default function Workspace() {
   const [readbackLang, setReadbackLang] = useState<string>("en");
   const [readbackLoading, setReadbackLoading] = useState(false);
   const stopPolling = useRef<(() => void) | null>(null);
+  const [accountOpen, setAccountOpen] = useState(false);
   const [showGuide, setShowGuide] = useState<boolean>(() => {
     try {
       return localStorage.getItem("truecopy.guide.dismissed") !== "1";
@@ -260,6 +261,16 @@ export default function Workspace() {
     try {
       const { url } = await api.auth.url();
       window.location.href = url;
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
+  const disconnect = async () => {
+    setAccountOpen(false);
+    try {
+      await api.auth.disconnect();
+      window.location.reload();
     } catch (e) {
       setError((e as Error).message);
     }
@@ -370,7 +381,33 @@ export default function Workspace() {
             </span>
           )}
           {auth?.connected && !auth.demo ? (
-            <span className="glass glass--t3 glass--verified px-3 py-1 text-t-green whitespace-nowrap">● {auth.channelTitle}</span>
+            <div className="relative">
+              <button
+                onClick={() => setAccountOpen((v) => !v)}
+                className="glass glass--t3 glass--verified px-3 py-1 text-t-green whitespace-nowrap hover:opacity-80"
+                title="Connected channel"
+              >
+                ● {auth.channelTitle} <span className="text-[9px] opacity-70 ml-0.5">▼</span>
+              </button>
+              {accountOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setAccountOpen(false)} />
+                  <div className="absolute right-0 mt-2 w-64 z-50 glass glass--t2 rounded-xl p-3 space-y-2 text-left">
+                    <p className="text-[11px] text-grey-400 uppercase tracking-widest">Connected channel</p>
+                    <p className="text-sm text-grey-100 truncate">{auth.channelTitle}</p>
+                    <p className="text-[11px] text-grey-600 leading-relaxed">
+                      Disconnect to remove this channel from your session and connect a different one. Your videos are not changed.
+                    </p>
+                    <button
+                      onClick={() => void disconnect()}
+                      className="w-full px-3 py-1.5 rounded-full border border-t-red/40 text-t-red text-xs font-medium hover:bg-t-red/10"
+                    >
+                      Disconnect this channel
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           ) : (
             <button onClick={connect} disabled={!auth?.configured} className="px-4 py-1.5 rounded-full bg-t-green text-bg font-medium hover:opacity-90 disabled:opacity-40 whitespace-nowrap">
               {auth?.demo ? "Connect your channel" : "Connect YouTube"}
